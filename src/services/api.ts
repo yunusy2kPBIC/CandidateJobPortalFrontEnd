@@ -1,3 +1,5 @@
+import type { UserRole } from '../auth/roles'
+
 export type User = {
   id: number
   email: string
@@ -6,10 +8,13 @@ export type User = {
   country_code: string
   phone: string
   country: string
+  nationality: string
+  gender: string
   city: string
   title: string
   about: string
-  role: 'candidate' | 'admin'
+  role: UserRole
+  is_email_verified: boolean
   resume_name: string | null
   created_at: string
 }
@@ -24,6 +29,13 @@ export type ExternalAuthProviders = {
 export type AuthResult = {
   access_token: string
   user: User
+}
+
+export type RegistrationPending = {
+  email: string
+  expires_at: string
+  resend_available_at: string
+  dev_verification_code: string | null
 }
 
 export type Job = {
@@ -68,6 +80,18 @@ export type JobFilters = {
   career_levels: string[]
 }
 
+export type LookupCountry = {
+  name: string
+  cities: string[]
+}
+
+export type LookupOptions = {
+  countries: LookupCountry[]
+  divisions: string[]
+  job_functions: string[]
+  career_levels: string[]
+}
+
 export type JobList = {
   items: Job[]
   total: number
@@ -84,6 +108,9 @@ export type RegisterPayload = {
   country_code: string
   phone: string
   country: string
+  nationality: string
+  gender: string
+  is_student: boolean
   accepted_terms: boolean
 }
 
@@ -119,6 +146,7 @@ export type AdminSummary = {
 export type AdminJobOptions = {
   countries: string[]
   cities: string[]
+  cities_by_country: Record<string, string[]>
   divisions: string[]
   job_functions: string[]
   career_levels: AdminJobPayload['career_level'][]
@@ -131,6 +159,8 @@ export type AdminCandidate = {
   last_name: string
   phone: string
   country: string
+  nationality: string
+  gender: string
   city: string
   title: string
   resume_name: string | null
@@ -238,6 +268,10 @@ export type CooperativeTrainingRequest = CooperativeTrainingPayload & {
   university_request_name: string | null
 }
 
+export type StudentCooperativeTrainingStatus = {
+  request: CooperativeTrainingRequest | null
+}
+
 export type SharePointStatus = {
   configured: boolean
   site_url: string | null
@@ -314,10 +348,12 @@ export type SharePointCandidatePayload = {
   country_code: string
   phone: string
   country: string
+  nationality?: string
+  gender?: string
   city: string
   professional_title: string
   about: string
-  role: 'Candidate' | 'Admin'
+  role: 'Candidate' | 'Student' | 'HR Admin' | 'Admin'
 }
 
 export type SharePointJobPayload = {
@@ -400,9 +436,24 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
   register: (payload: RegisterPayload) =>
-    request<AuthResult>('/api/auth/register', {
+    request<RegistrationPending>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+  emailAvailability: (email: string) =>
+    request<{ available: boolean; pending_verification: boolean }>('/api/auth/email-availability', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  verifyEmail: (email: string, code: string) =>
+    request<AuthResult>('/api/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    }),
+  resendVerification: (email: string) =>
+    request<RegistrationPending>('/api/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     }),
   logout: () => request<{ message: string }>('/api/auth/logout', { method: 'POST' }),
   externalAuthProviders: () => request<ExternalAuthProviders>('/api/auth/external/providers'),
@@ -414,12 +465,13 @@ export const api = {
       body: JSON.stringify({ code }),
     }),
   me: () => request<User>('/api/auth/me'),
+  lookups: () => request<LookupOptions>('/api/lookups'),
   dashboard: () => request<Dashboard>('/api/dashboard'),
   jobs: (params: URLSearchParams) => request<JobList>(`/api/jobs?${params.toString()}`),
   job: (id: number) => request<Job>(`/api/jobs/${id}`),
   apply: (id: number) => request<{ message: string }>(`/api/jobs/${id}/apply`, { method: 'POST' }),
   applications: () => request<Application[]>('/api/applications'),
-  updateProfile: (payload: Omit<User, 'id' | 'email' | 'role' | 'resume_name' | 'created_at'>) =>
+  updateProfile: (payload: Omit<User, 'id' | 'email' | 'role' | 'is_email_verified' | 'resume_name' | 'created_at'>) =>
     request<User>('/api/profile', { method: 'PUT', body: JSON.stringify(payload) }),
   uploadResume: (file: File) => {
     const form = new FormData()
@@ -502,6 +554,22 @@ export const api = {
   },
   deleteCooperativeTrainingRequest: (id: string) =>
     request<{ message: string }>(`/api/sharepoint/cooperative-training-requests/${id}`, { method: 'DELETE' }),
+  studentCooperativeTrainingStatus: () =>
+    request<StudentCooperativeTrainingStatus>('/api/student/cooperative-training'),
+  submitStudentCooperativeTraining: (
+    payload: CooperativeTrainingPayload,
+    transcript: File,
+    universityRequest: File,
+  ) => {
+    const form = new FormData()
+    form.append('payload', JSON.stringify(payload))
+    form.append('transcript', transcript)
+    form.append('university_request', universityRequest)
+    return request<CooperativeTrainingRequest>('/api/student/cooperative-training', {
+      method: 'POST',
+      body: form,
+    })
+  },
   sharepointStatus: () => request<SharePointStatus>('/api/sharepoint/status'),
   sharepointDiagnostics: () => request<SharePointDiagnostics>('/api/sharepoint/diagnostics'),
   sharepointLists: () => request<SharePointList[]>('/api/sharepoint/lists'),

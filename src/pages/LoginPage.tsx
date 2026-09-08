@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import PublicLayout from '../components/PublicLayout'
 import { Alert } from '../components/Feedback'
 import { useAuth } from '../context/AuthContext'
-import { api, type ExternalAuthProviders } from '../services/api'
+import { api, ApiError, type ExternalAuthProviders } from '../services/api'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('john.doe@example.com')
@@ -31,6 +31,10 @@ export default function LoginPage() {
       else localStorage.removeItem('candidate_portal_remember')
       navigate('/dashboard')
     } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 403) {
+        navigate('/verify-email', { state: { email: email.trim().toLowerCase() } })
+        return
+      }
       setError(reason instanceof Error ? reason.message : 'Unable to sign in')
     } finally {
       setSubmitting(false)

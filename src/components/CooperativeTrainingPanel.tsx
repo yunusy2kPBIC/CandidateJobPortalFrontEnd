@@ -17,6 +17,7 @@ import { Alert, EmptyState } from './Feedback'
 
 type Props = {
   refreshKey?: number
+  canManageSetup?: boolean
   onCountChange?: (count: number) => void
   onChanged?: () => void
 }
@@ -28,7 +29,7 @@ const emptyTrainingRequest: CooperativeTrainingPayload = {
   mobile_number: '966',
   email: '',
   gender: 'Male',
-  training_duration: 1,
+  training_duration: 3,
   semester: 'First Semester',
   training_starting_date: '',
   training_supervisor_name: '',
@@ -89,7 +90,7 @@ function toPayload(request: CooperativeTrainingRequest): CooperativeTrainingPayl
   }
 }
 
-export default function CooperativeTrainingPanel({ refreshKey = 0, onCountChange, onChanged }: Props) {
+export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetup = false, onCountChange, onChanged }: Props) {
   const [requests, setRequests] = useState<CooperativeTrainingRequest[]>([])
   const [form, setForm] = useState<CooperativeTrainingPayload>(emptyTrainingRequest)
   const [editing, setEditing] = useState<CooperativeTrainingRequest | null>(null)
@@ -246,7 +247,7 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, onCountChange
         <label>Mobile number<input required type="tel" minLength={7} maxLength={40} value={form.mobile_number} onChange={(event) => setForm({ ...form, mobile_number: event.target.value })} placeholder="966 5X XXX XXXX" /></label>
         <label>Email<input required type="email" maxLength={255} value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label>
         <label>Gender<select value={form.gender} onChange={(event) => setForm({ ...form, gender: event.target.value as CooperativeTrainingPayload['gender'] })}><option>Male</option><option>Female</option><option>Other</option></select></label>
-        <label>Training duration (months)<input required type="number" min={1} max={24} value={form.training_duration} onChange={(event) => setForm({ ...form, training_duration: Number(event.target.value) })} /></label>
+        <label>Training duration (months)<input required type="number" min={3} max={6} value={form.training_duration} onChange={(event) => setForm({ ...form, training_duration: Number(event.target.value) })} /></label>
         <label>Semester<select value={form.semester} onChange={(event) => setForm({ ...form, semester: event.target.value as CooperativeTrainingPayload['semester'] })}><option>First Semester</option><option>Second Semester</option><option>Summer Semester</option></select></label>
         <label>Training starting date<input required type="date" value={form.training_starting_date} onChange={(event) => setForm({ ...form, training_starting_date: event.target.value })} /></label>
         <label>Training supervisor name<input required maxLength={180} value={form.training_supervisor_name} onChange={(event) => setForm({ ...form, training_supervisor_name: event.target.value })} /></label>
@@ -274,7 +275,7 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, onCountChange
 
     <section className="panel admin-table-panel">
       <div className="panel-heading"><div><h2>Cooperative training requests</h2><p>Applicant details, education information, and supporting documents.</p></div>{!showForm && !error && <button className="button button-secondary button-small" onClick={openCreate}><Plus size={16} />Add request</button>}</div>
-      {error && !requests.length && !loading ? <div className="recruitment-setup-state"><p>The required lists or document library may not be ready yet.</p><button className="button button-primary button-small" disabled={settingUp} onClick={() => void setupModule()}>{settingUp ? 'Setting up...' : 'Set up module'}</button></div> : loading ? <div className="page-loader compact"><span className="loader" /></div> : requests.length ? <div className="table-wrap"><table><thead><tr><th>Applicant</th><th>Contact</th><th>Training</th><th>Education</th><th>Location</th><th>Documents</th><th>Actions</th></tr></thead><tbody>{requests.map((request) => <tr key={request.id}><td><strong>{request.first_name} {request.last_name}</strong><small>{request.id_number} · {request.gender}</small></td><td><strong>{request.mobile_number}</strong><small>{request.email}</small></td><td><strong>{request.semester}</strong><small>{request.training_duration} months · {new Date(`${request.training_starting_date}T00:00:00`).toLocaleDateString()}</small></td><td><strong>{request.major}</strong><small>{request.university_college} · GPA {request.cumulative_gpa}/{request.gpa_scale}</small></td><td><strong>{request.desired_city_for_training}</strong><small>Lives in {request.current_city_of_residency}</small></td><td><div className="training-document-links">{request.transcript_url ? <a href={request.transcript_url} target="_blank" rel="noreferrer"><FileText size={14} />Transcript<ExternalLink size={12} /></a> : <small>No transcript</small>}{request.university_request_url ? <a href={request.university_request_url} target="_blank" rel="noreferrer"><FileText size={14} />University request<ExternalLink size={12} /></a> : <small>No university request</small>}</div></td><td><div className="admin-row-actions"><button className="text-button" disabled={saving} onClick={() => openEdit(request)}><Pencil size={14} />Edit</button><button className="text-button text-button-danger" disabled={saving} onClick={() => void deleteRequest(request)}><Trash2 size={14} />Delete</button></div></td></tr>)}</tbody></table></div> : <EmptyState title="No cooperative training requests" description="Add the first cooperative training request and its supporting documents." />}
+      {error && !requests.length && !loading ? <div className="recruitment-setup-state"><p>{canManageSetup ? 'The required lists or document library may not be ready yet.' : 'The cooperative training module is unavailable. Ask an Administrator to verify the SharePoint setup.'}</p>{canManageSetup && <button className="button button-primary button-small" disabled={settingUp} onClick={() => void setupModule()}>{settingUp ? 'Setting up...' : 'Set up module'}</button>}</div> : loading ? <div className="page-loader compact"><span className="loader" /></div> : requests.length ? <div className="table-wrap"><table><thead><tr><th>Applicant</th><th>Contact</th><th>Training</th><th>Education</th><th>Location</th><th>Documents</th><th>Actions</th></tr></thead><tbody>{requests.map((request) => <tr key={request.id}><td><strong>{request.first_name} {request.last_name}</strong><small>{request.id_number} · {request.gender}</small></td><td><strong>{request.mobile_number}</strong><small>{request.email}</small></td><td><strong>{request.semester}</strong><small>{request.training_duration} months · {new Date(`${request.training_starting_date}T00:00:00`).toLocaleDateString()}</small></td><td><strong>{request.major}</strong><small>{request.university_college} · GPA {request.cumulative_gpa}/{request.gpa_scale}</small></td><td><strong>{request.desired_city_for_training}</strong><small>Lives in {request.current_city_of_residency}</small></td><td><div className="training-document-links">{request.transcript_url ? <a href={request.transcript_url} target="_blank" rel="noreferrer"><FileText size={14} />Transcript<ExternalLink size={12} /></a> : <small>No transcript</small>}{request.university_request_url ? <a href={request.university_request_url} target="_blank" rel="noreferrer"><FileText size={14} />University request<ExternalLink size={12} /></a> : <small>No university request</small>}</div></td><td><div className="admin-row-actions"><button className="text-button" disabled={saving} onClick={() => openEdit(request)}><Pencil size={14} />Edit</button><button className="text-button text-button-danger" disabled={saving} onClick={() => void deleteRequest(request)}><Trash2 size={14} />Delete</button></div></td></tr>)}</tbody></table></div> : <EmptyState title="No cooperative training requests" description="Add the first cooperative training request and its supporting documents." />}
     </section>
   </>
 }

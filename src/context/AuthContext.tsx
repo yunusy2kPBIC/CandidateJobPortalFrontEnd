@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { api, type ExternalAuthProvider, type RegisterPayload, type User } from '../services/api'
+import { api, type ExternalAuthProvider, type RegistrationPending, type RegisterPayload, type User } from '../services/api'
 
 type AuthContextValue = {
   user: User | null
@@ -7,7 +7,8 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>
   loginWithProvider: (provider: ExternalAuthProvider) => void
   completeExternalLogin: (code: string) => Promise<void>
-  register: (payload: RegisterPayload) => Promise<void>
+  register: (payload: RegisterPayload) => Promise<RegistrationPending>
+  verifyEmail: (email: string, code: string) => Promise<User>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
   setUser: (user: User) => void
@@ -54,9 +55,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const register = async (payload: RegisterPayload) => {
-    const result = await api.register(payload)
+    return api.register(payload)
+  }
+
+  const verifyEmail = async (email: string, code: string) => {
+    const result = await api.verifyEmail(email, code)
     localStorage.setItem(TOKEN_KEY, result.access_token)
     setUser(result.user)
+    return result.user
   }
 
   const logout = async () => {
@@ -69,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo(
-    () => ({ user, loading, login, loginWithProvider, completeExternalLogin, register, logout, refreshUser, setUser }),
+    () => ({ user, loading, login, loginWithProvider, completeExternalLogin, register, verifyEmail, logout, refreshUser, setUser }),
     [user, loading],
   )
 

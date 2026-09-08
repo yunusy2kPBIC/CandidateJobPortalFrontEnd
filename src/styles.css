@@ -141,6 +141,13 @@ label input, label select, label textarea, label .password-field, label .validat
 .password-field input, .validated-field input { margin-top: 0; padding-right: 44px; }
 .password-field button { position: absolute; right: 5px; top: 4px; height: 36px; width: 36px; display: grid; place-items: center; border: 0; background: none; color: #586982; cursor: pointer; }
 .validated-field > svg { position: absolute; right: 13px; top: 13px; color: var(--green); }
+.field-feedback { min-height: 18px; margin-top: 6px; display: flex; align-items: center; gap: 5px; color: #7d899c; font-size: .72rem; font-weight: 600; }
+.field-feedback:empty { visibility: hidden; }
+.field-feedback svg { width: 14px; height: 14px; }
+.field-feedback .text-button { font-size: inherit; text-decoration: underline; }
+.field-feedback.feedback-available { color: #08783d; }
+.field-feedback.feedback-pending { color: #9a6500; }
+.field-feedback.feedback-unavailable { color: #b32a36; }
 .alert { display: flex; align-items: center; gap: 10px; border-radius: 8px; padding: 11px 13px; margin: 0 0 18px; font-size: .88rem; }
 .alert-success { color: #0b713d; background: #eaf8f0; border: 1px solid #bde8ce; }
 .alert-error { color: #a42a36; background: #fff1f2; border: 1px solid #ffcdd2; }
@@ -179,6 +186,23 @@ label input, label select, label textarea, label .password-field, label .validat
 .external-callback-card > p { max-width: 360px; margin: 0 0 24px; }
 .external-callback-card .alert { width: 100%; text-align: left; }
 .external-callback-card .button { margin-top: 18px; }
+.verify-email-card { width: min(520px, 100%); align-self: center; padding: clamp(34px, 5vw, 56px); background: white; border: 1px solid #dce4ef; border-radius: 16px; box-shadow: var(--shadow); }
+.verify-email-icon { width: 68px; height: 68px; display: grid; place-items: center; margin-bottom: 22px; color: var(--blue); background: var(--blue-soft); border-radius: 50%; }
+.verify-email-icon svg { width: 32px; height: 32px; }
+.verify-email-card h1 { margin: 14px 0 8px; font-size: clamp(2rem, 3vw, 2.5rem); }
+.verify-email-card .auth-lead strong { color: #243954; overflow-wrap: anywhere; }
+.verify-email-form { margin-top: 24px; }
+.verification-code-input { font-size: 1.35rem; font-weight: 750; letter-spacing: .36em; text-align: center; padding-left: calc(13px + .36em); }
+.verification-expiry { margin-top: -8px; color: #58708e; font-size: .78rem; font-weight: 650; text-align: right; }
+.verification-expiry.expired { color: #b32a36; }
+.dev-verification-code { margin: 20px 0 4px; padding: 15px 17px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; color: #214a82; background: #edf5ff; border: 1px dashed #9fc5f5; border-radius: 10px; }
+.dev-verification-code span { font-size: .8rem; font-weight: 700; }
+.dev-verification-code strong { font-size: 1.35rem; letter-spacing: .18em; }
+.dev-verification-code small { grid-column: 1 / -1; color: #617895; }
+.verification-resend { margin-top: 23px; padding-top: 19px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid #e5eaf2; color: #66768d; font-size: .84rem; }
+.verification-resend .text-button { display: inline-flex; align-items: center; gap: 6px; }
+.verification-resend .text-button:disabled { color: #9aa7b8; cursor: not-allowed; }
+.development-email-note { margin: 17px 0 0; padding: 11px 13px; color: #6d788a; background: #f7f9fc; border-radius: 8px; font-size: .74rem; line-height: 1.5; }
 .login-visual { background-image: linear-gradient(0deg, rgba(1, 24, 60, .79), rgba(4, 52, 112, .08)), url('/candidate-hero.png'), linear-gradient(145deg, #0b6fa5, #061f53); background-position: center; background-size: cover; display: flex; align-items: end; padding: clamp(36px, 5vw, 70px); position: relative; }
 .login-visual::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(5,88,185,.2), transparent 50%); }
 .visual-overlay { position: relative; color: white; max-width: 470px; }
@@ -311,6 +335,7 @@ label input, label select, label textarea, label .password-field, label .validat
 .status-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 0 9px; border-radius: 6px; font-size: .7rem; font-weight: 700; }
 .status-new { color: #0756bd; background: #dceaff; }
 .status-open { color: #08783d; background: #dff5e8; }
+.status-applied { color: #6b3fa0; background: #eee4fb; }
 .job-meta { display: flex; flex-wrap: wrap; gap: 15px; margin: 11px 0 10px; color: #354761; font-size: .78rem; }
 .job-meta span { display: inline-flex; align-items: center; gap: 6px; }
 .job-card p { margin: 0; font-size: .82rem; color: #526079; }
@@ -347,6 +372,8 @@ label input, label select, label textarea, label .password-field, label .validat
 .detail-meta { margin-top: 27px; gap: 23px; }
 .detail-meta svg { width: 17px; }
 .share-button { border-color: #d7e3f2; background: rgba(255,255,255,.82); box-shadow: 0 7px 20px rgba(31,68,118,.08); }
+.job-share-actions { display: flex; align-items: center; gap: 9px; }
+.job-share-actions .button { position: relative; z-index: 2; white-space: nowrap; }
 .details-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, .55fr); gap: 18px; margin-top: 18px; align-items: start; }
 .prose-panel, .apply-panel { padding: clamp(24px, 3vw, 38px); border-color: #dfe8f4; }
 .job-detail-section { padding-bottom: 30px; border-bottom: 1px solid #e6ecf4; }
@@ -369,6 +396,13 @@ label input, label select, label textarea, label .password-field, label .validat
 .apply-panel h2 { font-size: 1.22rem; }
 .apply-panel p { font-size: .87rem; }
 .apply-panel small { display: block; margin-top: 14px; color: #8993a6; line-height: 1.45; }
+.apply-panel.application-complete { border-color: #bfe4cf; background: linear-gradient(180deg, #fff 0%, #f1fbf5 100%); }
+.apply-panel.application-complete .apply-icon { color: #08783d; background: #dff5e8; }
+.application-checklist { display: grid; gap: 9px; margin: 20px 0; padding: 15px; border: 1px solid #e0e7f1; border-radius: 10px; background: white; text-align: left; }
+.application-checklist span { display: flex; align-items: center; gap: 9px; color: #9b4a35; font-size: .8rem; font-weight: 700; }
+.application-checklist i { width: 22px; height: 22px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; color: #b14730; background: #fff0eb; font-style: normal; }
+.application-checklist span.complete { color: #176b42; }
+.application-checklist span.complete i { color: white; background: var(--green); }
 
 .applications-panel { overflow: hidden; }
 .table-wrap { overflow-x: auto; }
@@ -398,6 +432,7 @@ td small { color: #8993a5; }
 .form-section-heading > span { width: 42px; height: 42px; display: grid; place-items: center; color: var(--blue); background: var(--blue-soft); border-radius: 10px; }
 .form-section-heading svg { width: 20px; }
 .form-section-heading h2 { margin: 0 0 3px; font-size: 1.05rem; }
+.form-section-heading h2 em { color: #db2c36; font-style: normal; }
 .form-section-heading p { margin: 0; font-size: .77rem; }
 .two-column-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .phone-field { display: flex; margin-top: 7px; }
@@ -409,6 +444,7 @@ td small { color: #8993a5; }
 .resume-dropzone strong { margin: 13px 0 4px; max-width: 100%; word-break: break-word; }
 .resume-dropzone small { color: #8592a7; }
 .resume-dropzone.has-file { border-style: solid; border-color: #bed5f5; }
+.resume-dropzone.uploading { opacity: .72; cursor: wait; }
 .resume-dropzone .file-icon { color: #df3d3d; background: #fff0f0; }
 
 .password-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .72fr); gap: 18px; align-items: start; }
@@ -558,6 +594,8 @@ td small { color: #8993a5; }
   .visual-overlay h2 { font-size: 2rem; }
   .login-card { padding: 30px 24px; }
   .provider-login-grid { grid-template-columns: 1fr; }
+  .verify-email-card { padding: 30px 24px; }
+  .verification-resend { align-items: flex-start; flex-direction: column; }
   .register-card { padding: 25px 20px; }
   .register-aside { padding: 26px 22px; }
   .register-heading { display: block; }
@@ -585,7 +623,9 @@ td small { color: #8993a5; }
   .jobs-aside { grid-template-columns: 1fr; }
   .career-hero { height: 280px; }
   .benefits-panel { display: none; }
-  .details-hero { min-height: 0; padding: 25px 20px; }
+  .details-hero { min-height: 0; padding: 25px 20px; flex-direction: column; gap: 20px; }
+  .job-share-actions { width: 100%; }
+  .job-share-actions .button { flex: 1; }
   .detail-meta { display: grid; gap: 10px; }
   .share-button { display: none; }
   .prose-panel ul { grid-template-columns: 1fr; }
@@ -609,4 +649,31 @@ td small { color: #8993a5; }
   .admin-form-actions { padding: 0 17px 19px; }
   .admin-form-actions .button { width: 100%; }
   .admin-table-panel .panel-heading { align-items: flex-start; flex-direction: column; }
+}
+.student-registration-check { align-items: flex-start; padding: 14px 16px; border: 1px solid #dce5f1; border-radius: 12px; background: #f7faff; }
+.student-registration-check span { display: grid; gap: 3px; }
+.student-registration-check small { color: #66758c; font-weight: 400; line-height: 1.45; }
+.student-training-page { max-width: 1180px; }
+.student-training-requirements { margin-bottom: 22px; }
+.student-requirement-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.student-requirement-grid > span { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border-radius: 10px; background: #f6f9fd; color: #263a55; line-height: 1.45; }
+.student-requirement-grid svg { flex: 0 0 auto; width: 18px; color: #1876d2; margin-top: 1px; }
+.student-training-form { margin-bottom: 30px; }
+.student-training-form input[readonly] { background: #f3f6fa; color: #52647b; cursor: not-allowed; }
+.student-training-submitted { display: flex; align-items: flex-start; gap: 20px; padding: 30px; }
+.student-submission-icon { display: grid; place-items: center; flex: 0 0 54px; width: 54px; height: 54px; border-radius: 50%; background: #e8f7ef; color: #14804a; }
+.student-submission-icon svg { width: 27px; height: 27px; }
+.student-submission-copy { min-width: 0; flex: 1; }
+.student-submission-copy h2 { margin: 6px 0 8px; color: #102a4c; }
+.student-submission-copy > p { max-width: 760px; color: #607089; line-height: 1.6; }
+.student-submission-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
+.student-submission-details span { display: grid; gap: 4px; padding: 13px 14px; border: 1px solid #e2e8f1; border-radius: 10px; background: #fbfcfe; }
+.student-submission-details small { color: #718096; }
+.student-submission-details strong { color: #183451; overflow-wrap: anywhere; }
+.student-submission-documents { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 18px; border-top: 1px solid #e5eaf1; }
+.student-submission-documents > strong { width: 100%; color: #263a55; }
+.student-submission-documents a, .student-submission-documents span { display: inline-flex; align-items: center; gap: 7px; padding: 9px 11px; border-radius: 8px; background: #eef5fc; color: #1769b0; text-decoration: none; }
+@media (max-width: 760px) {
+  .student-requirement-grid, .student-submission-details { grid-template-columns: 1fr; }
+  .student-training-submitted { padding: 22px; }
 }
