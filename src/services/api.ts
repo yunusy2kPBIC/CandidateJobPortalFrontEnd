@@ -38,6 +38,30 @@ export type RegistrationPending = {
   dev_verification_code: string | null
 }
 
+export type PasswordRecoveryPending = {
+  message: string
+  email: string
+  expires_at: string
+  resend_available_at: string
+  dev_reset_code: string | null
+}
+
+export type PrivacyNotice = {
+  title: string
+  version: string
+  effective_date: string
+  contact_email: string
+  sections: { title: string; content: string }[]
+}
+
+export type ConsentEvidence = {
+  document_type: string
+  document_version: string
+  accepted_at: string
+  ip_address: string
+  user_agent: string
+}
+
 export type Job = {
   id: number
   title: string
@@ -112,6 +136,7 @@ export type RegisterPayload = {
   gender: string
   is_student: boolean
   accepted_terms: boolean
+  privacy_version: string
 }
 
 export type Notification = {
@@ -455,6 +480,23 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email }),
     }),
+  requestPasswordRecovery: (email: string) =>
+    request<PasswordRecoveryPending>('/api/auth/password-recovery/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (email: string, code: string, newPassword: string, confirmPassword: string) =>
+    request<{ message: string }>('/api/auth/password-recovery/reset', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        code,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      }),
+    }),
+  privacyNotice: () => request<PrivacyNotice>('/api/privacy'),
+  privacyConsent: () => request<ConsentEvidence>('/api/privacy/consent'),
   logout: () => request<{ message: string }>('/api/auth/logout', { method: 'POST' }),
   externalAuthProviders: () => request<ExternalAuthProviders>('/api/auth/external/providers'),
   externalLoginUrl: (provider: ExternalAuthProvider, returnUrl: string) =>

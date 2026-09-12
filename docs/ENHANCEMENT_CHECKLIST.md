@@ -23,9 +23,9 @@ Status convention:
 - [x] CHG-05 - Validate email availability before registration submission
 - [x] CHG-06 - Capture gender during account registration
 - [x] CHG-07 - Verify email before activating a new account
-- [ ] CHG-08 - Send account-created confirmation email
-- [ ] CHG-09 - Implement password recovery
-- [ ] CHG-10 - Display privacy content and persist consent evidence - PARTIAL; acknowledgement is required but policy evidence is not stored
+- [x] CHG-08 - Send account-created confirmation email
+- [x] CHG-09 - Implement password recovery
+- [x] CHG-10 - Display privacy content and persist consent evidence
 - [x] CHG-11 - Verify candidate post-login destinations
 
 ## Candidate profile and resume

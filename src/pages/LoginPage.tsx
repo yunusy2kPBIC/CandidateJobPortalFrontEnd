@@ -68,7 +68,7 @@ export default function LoginPage() {
             </label>
             <div className="form-row-between">
               <label className="checkbox-label"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />Remember me</label>
-              <button className="text-button" type="button" onClick={() => setError('Please contact candidate support to reset your password.')}>Forgot password?</button>
+              <button className="text-button" type="button" onClick={() => navigate('/forgot-password', { state: { email: email.trim() } })}>Forgot password?</button>
             </div>
             <button className="button button-primary button-wide" disabled={submitting}>{submitting ? <span className="button-loading"><span className="loader loader-small" />Signing in</span> : 'Sign In'}</button>
           </form>

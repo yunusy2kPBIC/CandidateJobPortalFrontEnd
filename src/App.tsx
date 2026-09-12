@@ -6,12 +6,14 @@ import ApplicationsPage from './pages/ApplicationsPage'
 import AdminPage from './pages/AdminPage'
 import DashboardPage from './pages/DashboardPage'
 import ExternalAuthCallbackPage from './pages/ExternalAuthCallbackPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import JobDetailsPage from './pages/JobDetailsPage'
 import JobsPage from './pages/JobsPage'
 import LoginPage from './pages/LoginPage'
 import NotificationsPage from './pages/NotificationsPage'
 import PasswordPage from './pages/PasswordPage'
 import ProfilePage from './pages/ProfilePage'
+import PrivacyPage from './pages/PrivacyPage'
 import RegisterPage from './pages/RegisterPage'
 import SettingsPage from './pages/SettingsPage'
 import SharePointPage from './pages/SharePointPage'
@@ -68,8 +70,10 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
       <Route path="/auth/callback" element={<PublicOnly><ExternalAuthCallbackPage /></PublicOnly>} />
+      <Route path="/forgot-password" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
       <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
       <Route path="/verify-email" element={<PublicOnly><VerifyEmailPage /></PublicOnly>} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route element={<ProtectedArea />}>
         <Route path="/dashboard" element={<CandidateOnly><DashboardPage /></CandidateOnly>} />
         <Route path="/jobs" element={<CandidateOnly><JobsPage /></CandidateOnly>} />

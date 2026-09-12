@@ -1,11 +1,11 @@
 import { BriefcaseBusiness, Check, CheckCircle2, CircleX, Clock3, Eye, EyeOff, FileCheck2, GraduationCap, LoaderCircle, ShieldCheck, TrendingUp, UserRound } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Alert } from '../components/Feedback'
 import PublicLayout from '../components/PublicLayout'
 import { savePendingVerification } from '../auth/pendingVerification'
 import { useAuth } from '../context/AuthContext'
-import { api, type LookupOptions } from '../services/api'
+import { api, type LookupOptions, type PrivacyNotice } from '../services/api'
 
 const emptyLookups: LookupOptions = { countries: [], divisions: [], job_functions: [], career_levels: [] }
 type EmailAvailabilityState = 'idle' | 'checking' | 'available' | 'pending' | 'unavailable' | 'error'
@@ -24,6 +24,7 @@ const initialForm = {
   gender: '',
   is_student: false,
   accepted_terms: false,
+  privacy_version: '',
 }
 
 export default function RegisterPage() {
@@ -33,6 +34,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [lookups, setLookups] = useState<LookupOptions>(emptyLookups)
+  const [privacyNotice, setPrivacyNotice] = useState<PrivacyNotice | null>(null)
   const [emailAvailability, setEmailAvailability] = useState<EmailAvailabilityState>('idle')
   const { register } = useAuth()
   const navigate = useNavigate()
@@ -53,6 +55,16 @@ export default function RegisterPage() {
   useEffect(() => {
     let active = true
     api.lookups().then((values) => { if (active) setLookups(values) }).catch(() => undefined)
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    api.privacyNotice().then((notice) => {
+      if (!active) return
+      setPrivacyNotice(notice)
+      setForm((current) => ({ ...current, privacy_version: notice.version }))
+    }).catch(() => { if (active) setError('Unable to load the current privacy notice. Please refresh the page.') })
     return () => { active = false }
   }, [])
 
@@ -148,8 +160,8 @@ export default function RegisterPage() {
               <button type="button" className={human ? 'checked' : ''} onClick={() => setHuman((value) => !value)}><span>{human && <Check size={20} />}</span>I am human</button>
               <div><ShieldCheck size={25} /><small>Protected form</small></div>
             </div>
-            <label className="checkbox-label full-field terms-check"><input type="checkbox" checked={form.accepted_terms} onChange={(event) => update('accepted_terms', event.target.checked)} />I accept the <a href="#privacy">data privacy statement</a> and terms of use.</label>
-            <button className="button button-primary button-wide full-field" disabled={submitting}>{submitting ? 'Creating account…' : 'Create Account'}</button>
+            <label className="checkbox-label full-field terms-check"><input type="checkbox" checked={form.accepted_terms} onChange={(event) => update('accepted_terms', event.target.checked)} disabled={!privacyNotice} /><span>I have read and accept the <Link to="/privacy" target="_blank" rel="noreferrer">Candidate Portal Privacy Notice</Link>{privacyNotice && <> (version {privacyNotice.version})</>} and terms of use.</span></label>
+            <button className="button button-primary button-wide full-field" disabled={submitting || !privacyNotice}>{submitting ? 'Creating account…' : 'Create Account'}</button>
           </form>
         </div>
         <aside className="register-aside">

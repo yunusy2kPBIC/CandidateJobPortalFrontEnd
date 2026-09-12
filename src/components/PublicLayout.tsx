@@ -18,7 +18,7 @@ export default function PublicLayout({ children, action }: { children: ReactNode
       <footer className="public-footer">
         <span>© 2026 PBICareerPosting. All rights reserved.</span>
         <nav aria-label="Legal links">
-          <a href="#privacy">Privacy Policy</a>
+          <Link to="/privacy">Privacy Policy</Link>
           <span>•</span>
           <a href="#terms">Terms of Use</a>
           <span>•</span>
