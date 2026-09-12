@@ -77,6 +77,12 @@ const defaultExpiryDate = () => {
   return dateInputValue(expiry)
 }
 
+const latestAdultBirthDate = () => {
+  const cutoff = new Date()
+  cutoff.setFullYear(cutoff.getFullYear() - 18)
+  return dateInputValue(cutoff)
+}
+
 const createEmptyJob = (): AdminJobPayload => ({
   title: '',
   division: '',
@@ -89,7 +95,9 @@ const createEmptyJob = (): AdminJobPayload => ({
   description: '',
   requirements: '',
   is_open: true,
+  is_published: true,
   is_featured: false,
+  posted_at: dateInputValue(new Date()),
   expires_at: defaultExpiryDate(),
 })
 
@@ -138,11 +146,15 @@ const jobToPayload = (job: Job): AdminJobPayload => ({
   description: job.description,
   requirements: job.requirements,
   is_open: job.is_open,
+  is_published: job.is_published,
   is_featured: job.is_featured,
+  posted_at: job.posted_at.slice(0, 10),
   expires_at: job.expires_at?.slice(0, 10) ?? defaultExpiryDate(),
 })
 
 const isJobExpired = (job: Job) => Boolean(job.expires_at && job.expires_at.slice(0, 10) < dateInputValue(new Date()))
+const isJobAvailable = (job: Job) => job.is_published && job.is_open &&
+  job.posted_at.slice(0, 10) <= dateInputValue(new Date()) && !isJobExpired(job)
 
 export default function AdminPage() {
   const location = useLocation()
@@ -331,15 +343,15 @@ export default function AdminPage() {
       if (editingJob) {
         const updated = await api.updateAdminJob(editingJob.id, jobForm)
         setJobs((current) => current.map((item) => item.id === updated.id ? updated : item))
-        if (updated.is_open !== editingJob.is_open) {
-          setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (updated.is_open ? 1 : -1) } : current)
+        if (isJobAvailable(updated) !== isJobAvailable(editingJob)) {
+          setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (isJobAvailable(updated) ? 1 : -1) } : current)
         }
         setNotice(`Job “${updated.title}” was updated successfully.`)
       } else {
         const created = await api.createAdminJob(jobForm)
         setJobs((current) => [created, ...current])
-        setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (created.is_open ? 1 : 0) } : current)
-        setNotice(`Job “${created.title}” was published successfully.`)
+        setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (isJobAvailable(created) ? 1 : 0) } : current)
+        setNotice(`Job “${created.title}” was ${created.is_published ? 'published' : 'saved as unpublished'} successfully.`)
       }
       void refreshAuditLogs()
       void refreshSummary()
@@ -359,7 +371,7 @@ export default function AdminPage() {
     try {
       const result = await api.deleteAdminJob(job.id)
       setJobs((current) => current.filter((item) => item.id !== job.id))
-      if (job.is_open) {
+      if (isJobAvailable(job)) {
         setSummary((current) => current ? { ...current, open_jobs: Math.max(0, current.open_jobs - 1) } : current)
       }
       if (editingJob?.id === job.id) closeJobForm()
@@ -380,8 +392,8 @@ export default function AdminPage() {
     try {
       const updated = await api.updateAdminJob(job.id, changes)
       setJobs((current) => current.map((item) => item.id === updated.id ? updated : item))
-      if (changes.is_open !== undefined && changes.is_open !== job.is_open) {
-        setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (changes.is_open ? 1 : -1) } : current)
+      if (isJobAvailable(updated) !== isJobAvailable(job)) {
+        setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (isJobAvailable(updated) ? 1 : -1) } : current)
       }
       setNotice(`Job “${updated.title}” was updated.`)
       void refreshAuditLogs()
@@ -501,7 +513,11 @@ export default function AdminPage() {
     { label: 'Open jobs', value: summary?.open_jobs ?? '—', icon: BriefcaseBusiness, tone: 'green' },
     { label: 'Administrators', value: summary?.admins ?? '—', icon: ShieldCheck, tone: 'amber' },
   ]
-  const postingDate = editingJob?.posted_at.slice(0, 10) ?? dateInputValue(new Date())
+  const todayDate = dateInputValue(new Date())
+  const originalPostingDate = editingJob?.posted_at.slice(0, 10)
+  const minimumPostingDate = originalPostingDate && originalPostingDate < todayDate
+    ? originalPostingDate
+    : todayDate
   const hasJobOptions = jobOptions.countries.length > 0 && jobOptions.cities.length > 0 &&
     jobOptions.divisions.length > 0 && jobOptions.job_functions.length > 0 && jobOptions.career_levels.length > 0
   const availableJobCities = jobOptions.cities_by_country[jobForm.country] ?? []
@@ -550,18 +566,21 @@ export default function AdminPage() {
                 <label>Job function<select required value={jobForm.job_function} onChange={(event) => setJobForm({ ...jobForm, job_function: event.target.value })}><option value="" disabled>Select job function</option>{jobOptions.job_functions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
                 <label>Career level<select required value={jobForm.career_level} onChange={(event) => setJobForm({ ...jobForm, career_level: event.target.value as AdminJobPayload['career_level'] })}>{jobOptions.career_levels.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
                 <label>Employment type<select value={jobForm.employment_type} onChange={(event) => setJobForm({ ...jobForm, employment_type: event.target.value as AdminJobPayload['employment_type'] })}><option>Full-time</option><option>Part-time</option><option>Contract</option><option>Remote</option></select></label>
-                <label>Posting date<input type="date" value={postingDate} disabled aria-label="Posting date is set automatically" /></label>
-                <label>Expiry date<input required type="date" min={postingDate} value={jobForm.expires_at} onChange={(event) => setJobForm({ ...jobForm, expires_at: event.target.value })} /></label>
-                <label className="admin-job-wide">Summary<textarea required rows={2} value={jobForm.summary} onChange={(event) => setJobForm({ ...jobForm, summary: event.target.value })} /></label>
-                <label className="admin-job-wide">Description<textarea required rows={4} value={jobForm.description} onChange={(event) => setJobForm({ ...jobForm, description: event.target.value })} /></label>
-                <label className="admin-job-wide">Requirements<textarea required rows={4} value={jobForm.requirements} onChange={(event) => setJobForm({ ...jobForm, requirements: event.target.value })} placeholder="Enter one requirement per line" /></label>
-                <label className="checkbox-label"><input type="checkbox" checked={jobForm.is_open} onChange={(event) => setJobForm({ ...jobForm, is_open: event.target.checked })} />Publish as open</label>
+                <label>Job status<select value={jobForm.is_open ? 'open' : 'closed'} onChange={(event) => setJobForm({ ...jobForm, is_open: event.target.value === 'open' })}><option value="open">Open</option><option value="closed">Closed</option></select></label>
+                <div className="admin-job-date-fields admin-job-wide">
+                  <label>Posting date<input required type="date" min={minimumPostingDate} value={jobForm.posted_at} onChange={(event) => setJobForm({ ...jobForm, posted_at: event.target.value })} /></label>
+                  <label>Expiry date<input required type="date" min={jobForm.posted_at} value={jobForm.expires_at} onChange={(event) => setJobForm({ ...jobForm, expires_at: event.target.value })} /></label>
+                </div>
+                <label className="admin-job-wide">Summary<textarea required rows={2} maxLength={2000} value={jobForm.summary} onChange={(event) => setJobForm({ ...jobForm, summary: event.target.value })} /><small className="field-character-count">{jobForm.summary.length.toLocaleString()} / 2,000 characters</small></label>
+                <label className="admin-job-wide">Description<textarea required rows={4} maxLength={10000} value={jobForm.description} onChange={(event) => setJobForm({ ...jobForm, description: event.target.value })} /><small className="field-character-count">{jobForm.description.length.toLocaleString()} / 10,000 characters</small></label>
+                <label className="admin-job-wide">Requirements<textarea required rows={4} maxLength={10000} value={jobForm.requirements} onChange={(event) => setJobForm({ ...jobForm, requirements: event.target.value })} placeholder="Enter one requirement per line" /><small className="field-character-count">{jobForm.requirements.length.toLocaleString()} / 10,000 characters</small></label>
+                <label className="checkbox-label"><input type="checkbox" checked={jobForm.is_published} onChange={(event) => setJobForm({ ...jobForm, is_published: event.target.checked })} />{editingJob ? 'Published' : 'Publish immediately'}</label>
               </div>
               <div className="admin-form-actions"><button className="button button-primary" disabled={saving === 'create-job' || saving === `edit-job-${editingJob?.id}`}><Save size={17} />{saving ? 'Saving…' : editingJob ? 'Save changes' : 'Publish job'}</button></div>
             </form>}
             <section className="panel admin-table-panel">
               <div className="panel-heading"><div><h2>Job postings</h2><p>Open jobs appear immediately in candidate search.</p></div>{!showJobForm && <button className="button button-secondary button-small" onClick={openCreateJob} disabled={!hasJobOptions} title={hasJobOptions ? undefined : 'No job dropdown values are available in the database'}><Plus size={16} />Add job</button>}</div>
-              <div className="table-wrap"><table><thead><tr><th>Job</th><th>Location</th><th>Posted</th><th>Expiry date</th><th>Status</th><th>Actions</th></tr></thead><tbody>{jobs.map((job) => { const expired = isJobExpired(job); return <tr key={job.id}><td><strong>{job.title}</strong><small>{job.division} · {job.career_level}</small></td><td>{job.city}, {job.country}</td><td>{new Date(job.posted_at).toLocaleDateString()}</td><td>{job.expires_at ? new Date(`${job.expires_at.slice(0, 10)}T00:00:00`).toLocaleDateString() : 'Not set'}</td><td><span className={`status-pill ${job.is_open && !expired ? 'status-open' : 'status-withdrawn'}`}>{expired ? 'Expired' : job.is_open ? 'Open' : 'Closed'}</span></td><td><div className="admin-row-actions"><button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_open: !job.is_open })}>{job.is_open ? 'Close' : 'Reopen'}</button><button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_featured: !job.is_featured })}>{job.is_featured ? 'Unfeature' : 'Feature'}</button><button className="text-button" disabled={saving !== null} onClick={() => openEditJob(job)}><Pencil size={14} />Edit</button>{isAdministrator && <button className="text-button text-button-danger" disabled={saving !== null} onClick={() => void deleteJob(job)}><Trash2 size={14} />Delete</button>}</div></td></tr> })}</tbody></table></div>
+              <div className="table-wrap"><table><thead><tr><th>Job</th><th>Location</th><th>Posted</th><th>Expiry date</th><th>Status</th><th>Publish status</th><th>Actions</th></tr></thead><tbody>{jobs.map((job) => { const expired = isJobExpired(job); const scheduled = job.posted_at.slice(0, 10) > dateInputValue(new Date()); return <tr key={job.id}><td><strong>{job.title}</strong><small>{job.division} · {job.career_level}</small></td><td>{job.city}, {job.country}</td><td>{new Date(job.posted_at).toLocaleDateString()}</td><td>{job.expires_at ? new Date(`${job.expires_at.slice(0, 10)}T00:00:00`).toLocaleDateString() : 'Not set'}</td><td><span className={`status-pill ${job.is_open && !expired ? 'status-open' : 'status-withdrawn'}`}>{!job.is_open ? 'Closed' : scheduled ? 'Scheduled' : expired ? 'Expired' : 'Open'}</span></td><td><span className={`status-pill ${job.is_published ? 'status-open' : 'status-withdrawn'}`}>{job.is_published ? 'Published' : 'Unpublished'}</span></td><td><div className="admin-row-actions">{!job.is_published && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_published: true })}>Publish</button>}{job.is_published && job.is_open && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_open: false })}>Close</button>}<button className="text-button" disabled={saving !== null} onClick={() => openEditJob(job)}><Pencil size={14} />Edit</button>{isAdministrator && <button className="text-button text-button-danger" disabled={saving !== null} onClick={() => void deleteJob(job)}><Trash2 size={14} />Delete</button>}</div></td></tr> })}</tbody></table></div>
             </section>
           </>}
 
@@ -574,12 +593,12 @@ export default function AdminPage() {
                 <label>Nationality<input required list="nationality-options" value={requestForm.nationality} onChange={(event) => setRequestForm({ ...requestForm, nationality: event.target.value })} /><datalist id="nationality-options">{nationalityOptions.map((value) => <option key={value} value={value} />)}</datalist></label>
                 <label>Gender<select value={requestForm.gender} onChange={(event) => setRequestForm({ ...requestForm, gender: event.target.value as RecruitmentRequestPayload['gender'] })}><option>Male</option><option>Female</option><option>Other</option></select></label>
                 <label>Driver license type<select value={requestForm.driver_license_type} onChange={(event) => setRequestForm({ ...requestForm, driver_license_type: event.target.value as RecruitmentRequestPayload['driver_license_type'] })}><option>Saudi License</option><option>Valid GCC License</option><option>Other License</option><option>None</option></select></label>
-                <label>Mobile number<input required type="tel" minLength={7} maxLength={40} value={requestForm.mobile_number} onChange={(event) => setRequestForm({ ...requestForm, mobile_number: event.target.value })} placeholder="966 5X XXX XXXX" /></label>
+                <label>Mobile number<input required type="tel" inputMode="numeric" minLength={9} maxLength={14} pattern="(?:966|00966|0)?5[0-9]{8}" title="Enter a Saudi mobile number such as 05XXXXXXXX or 9665XXXXXXXX" value={requestForm.mobile_number} onChange={(event) => setRequestForm({ ...requestForm, mobile_number: event.target.value.replace(/\D/g, '').slice(0, 14) })} placeholder="9665XXXXXXXX" /></label>
                 <label>Email address<input required type="email" maxLength={255} value={requestForm.email_address} onChange={(event) => setRequestForm({ ...requestForm, email_address: event.target.value })} /></label>
-                <label>ID/Iqama number<input required inputMode="numeric" minLength={7} maxLength={20} pattern="[1-9][0-9]{6,19}" title="Enter 7-20 digits; the first digit cannot be zero" value={requestForm.iqama_number} onChange={(event) => setRequestForm({ ...requestForm, iqama_number: event.target.value })} /></label>
+                <label>Iqama number<input required inputMode="numeric" minLength={10} maxLength={10} pattern="2[0-9]{9}" title="Enter a 10-digit Iqama number beginning with 2" value={requestForm.iqama_number} onChange={(event) => setRequestForm({ ...requestForm, iqama_number: event.target.value.replace(/\D/g, '').slice(0, 10) })} /></label>
                 <label>Iqama profession<input required maxLength={150} value={requestForm.iqama_profession} onChange={(event) => setRequestForm({ ...requestForm, iqama_profession: event.target.value })} /></label>
                 <label>Current employer<input list="employer-options" maxLength={180} value={requestForm.current_employer} onChange={(event) => setRequestForm({ ...requestForm, current_employer: event.target.value })} /><datalist id="employer-options">{employerOptions.map((value) => <option key={value} value={value} />)}</datalist></label>
-                <label>Date of birth<input required type="date" max={new Date().toISOString().slice(0, 10)} value={requestForm.date_of_birth} onChange={(event) => setRequestForm({ ...requestForm, date_of_birth: event.target.value })} /></label>
+                <label>Date of birth<input required type="date" max={latestAdultBirthDate()} title="Applicant must be at least 18 years old" value={requestForm.date_of_birth} onChange={(event) => setRequestForm({ ...requestForm, date_of_birth: event.target.value })} /></label>
                 <label>City (current location)<input required list="request-city-options" maxLength={100} value={requestForm.city} onChange={(event) => setRequestForm({ ...requestForm, city: event.target.value })} /><datalist id="request-city-options">{cityOptions.map((value) => <option key={value} value={value} />)}</datalist></label>
                 <label>Accept work in another city?<select value={requestForm.accept_work_in_another_city ? 'yes' : 'no'} onChange={(event) => setRequestForm({ ...requestForm, accept_work_in_another_city: event.target.value === 'yes' })}><option value="yes">Yes</option><option value="no">No</option></select></label>
                 <label>Qualification<select value={requestForm.qualification} onChange={(event) => setRequestForm({ ...requestForm, qualification: event.target.value as RecruitmentRequestPayload['qualification'] })}><option>High School</option><option>Diploma</option><option>Bachelor's Degree</option><option>Master's Degree</option><option>Doctorate</option><option>Other</option></select></label>

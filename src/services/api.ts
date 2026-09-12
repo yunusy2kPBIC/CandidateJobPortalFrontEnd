@@ -75,6 +75,7 @@ export type Job = {
   description: string
   requirements: string
   is_open: boolean
+  is_published: boolean
   is_featured: boolean
   posted_at: string
   expires_at: string | null
@@ -215,7 +216,9 @@ export type AdminJobPayload = {
   description: string
   requirements: string
   is_open: boolean
+  is_published: boolean
   is_featured: boolean
+  posted_at: string
   expires_at: string
 }
 

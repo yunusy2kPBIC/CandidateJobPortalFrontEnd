@@ -1,6 +1,6 @@
-import { BriefcaseBusiness, Check, CheckCircle2, CircleX, Clock3, Eye, EyeOff, FileCheck2, GraduationCap, LoaderCircle, ShieldCheck, TrendingUp, UserRound } from 'lucide-react'
+import { BriefcaseBusiness, CalendarDays, Check, CheckCircle2, CircleX, Clock3, Eye, EyeOff, FileCheck2, GraduationCap, LoaderCircle, Mail, ShieldCheck, TrendingUp, UserRound, X } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { Alert } from '../components/Feedback'
 import PublicLayout from '../components/PublicLayout'
 import { savePendingVerification } from '../auth/pendingVerification'
@@ -35,6 +35,8 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false)
   const [lookups, setLookups] = useState<LookupOptions>(emptyLookups)
   const [privacyNotice, setPrivacyNotice] = useState<PrivacyNotice | null>(null)
+  const [privacyOpen, setPrivacyOpen] = useState(false)
+  const [privacyReviewed, setPrivacyReviewed] = useState(false)
   const [emailAvailability, setEmailAvailability] = useState<EmailAvailabilityState>('idle')
   const { register } = useAuth()
   const navigate = useNavigate()
@@ -67,6 +69,20 @@ export default function RegisterPage() {
     }).catch(() => { if (active) setError('Unable to load the current privacy notice. Please refresh the page.') })
     return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    if (!privacyOpen) return
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPrivacyOpen(false)
+    }
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [privacyOpen])
 
   useEffect(() => {
     const email = form.email.trim().toLowerCase()
@@ -160,8 +176,8 @@ export default function RegisterPage() {
               <button type="button" className={human ? 'checked' : ''} onClick={() => setHuman((value) => !value)}><span>{human && <Check size={20} />}</span>I am human</button>
               <div><ShieldCheck size={25} /><small>Protected form</small></div>
             </div>
-            <label className="checkbox-label full-field terms-check"><input type="checkbox" checked={form.accepted_terms} onChange={(event) => update('accepted_terms', event.target.checked)} disabled={!privacyNotice} /><span>I have read and accept the <Link to="/privacy" target="_blank" rel="noreferrer">Candidate Portal Privacy Notice</Link>{privacyNotice && <> (version {privacyNotice.version})</>} and terms of use.</span></label>
-            <button className="button button-primary button-wide full-field" disabled={submitting || !privacyNotice}>{submitting ? 'Creating account…' : 'Create Account'}</button>
+            <label className="checkbox-label full-field terms-check"><input type="checkbox" required checked={form.accepted_terms} onChange={(event) => update('accepted_terms', event.target.checked)} disabled={!privacyNotice || !privacyReviewed} /><span>I have read and accept the <button type="button" className="privacy-inline-trigger" disabled={!privacyNotice} onClick={() => setPrivacyOpen(true)}>Candidate Portal Privacy Notice</button>{privacyNotice && <> (version {privacyNotice.version})</>} and terms of use.{privacyNotice && !privacyReviewed && <small>Open the notice and select Continue registration to enable this checkbox.</small>}</span></label>
+            <button className="button button-primary button-wide full-field" disabled={submitting || !privacyNotice || !privacyReviewed || !form.accepted_terms}>{submitting ? 'Creating account…' : 'Create Account'}</button>
           </form>
         </div>
         <aside className="register-aside">
@@ -183,6 +199,28 @@ export default function RegisterPage() {
           </div>
         </aside>
       </section>
+      {privacyOpen && privacyNotice && <div className="privacy-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPrivacyOpen(false) }}>
+        <section className="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="registration-privacy-title">
+          <header className="privacy-modal-heading">
+            <div><span className="eyebrow"><FileCheck2 size={16} />Candidate information</span><h2 id="registration-privacy-title">{privacyNotice.title}</h2></div>
+            <button type="button" className="icon-button" aria-label="Close privacy notice" onClick={() => setPrivacyOpen(false)}><X size={20} /></button>
+          </header>
+          <div className="privacy-modal-content">
+            <div className="privacy-notice-meta">
+              <span><FileCheck2 />Version <strong>{privacyNotice.version}</strong></span>
+              <span><CalendarDays />Effective <strong>{privacyNotice.effective_date}</strong></span>
+            </div>
+            <div className="privacy-section-list">
+              {privacyNotice.sections.map((section) => <section key={section.title}><h2>{section.title}</h2><p>{section.content}</p></section>)}
+            </div>
+            <aside className="privacy-contact"><Mail /><div><strong>Privacy questions</strong><p>Contact <a href={`mailto:${privacyNotice.contact_email}`}>{privacyNotice.contact_email}</a>.</p></div></aside>
+          </div>
+          <footer className="privacy-modal-actions">
+            <button type="button" className="button button-secondary" onClick={() => setPrivacyOpen(false)}>Close</button>
+            <button type="button" className="button button-primary" onClick={() => { setPrivacyReviewed(true); setPrivacyOpen(false) }}>Continue registration</button>
+          </footer>
+        </section>
+      </div>}
     </PublicLayout>
   )
 }

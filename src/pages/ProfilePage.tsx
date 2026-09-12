@@ -60,6 +60,7 @@ export default function ProfilePage() {
   const initials = `${user?.first_name[0] ?? ''}${user?.last_name[0] ?? ''}`
   const administrativeProfile = isRecruitmentAdministrator(user?.role)
   const studentProfile = user?.role === portalRoles.student
+  const candidateNeedsResume = user?.role === portalRoles.candidate && !user.resume_name
   const compactProfile = administrativeProfile || studentProfile
   const citiesByCountry = Object.fromEntries(lookups.countries.map((country) => [country.name, country.cities]))
   const lookupCountries = lookups.countries.map((country) => country.name)
@@ -81,6 +82,7 @@ export default function ProfilePage() {
   return (
     <div className="page-container profile-page">
       <PageHeader title="Profile" subtitle={profileSubtitle} />
+      {candidateNeedsResume && <Alert type="error" message="Resume upload is mandatory before you can apply for jobs. Upload a PDF, DOC, or DOCX file below to complete your candidate profile." />}
       {message && <Alert type={message.type} message={message.text} />}
       <div className={`profile-layout ${compactProfile ? 'admin-profile-layout' : ''}`}>
         <aside className="panel profile-summary">
@@ -103,7 +105,7 @@ export default function ProfilePage() {
           </div>
           <button className="button button-primary save-button" disabled={saving}><Save size={17} />{saving ? 'Saving…' : 'Save changes'}</button>
         </form>
-        {user?.role === portalRoles.candidate && <aside className="panel resume-panel">
+        {user?.role === portalRoles.candidate && <aside className={`panel resume-panel ${candidateNeedsResume ? 'resume-required' : ''}`}>
           <div className="form-section-heading"><span><FileText /></span><div><h2>Resume <em>*</em></h2><p>Required before applying. PDF, DOC or DOCX up to 5 MB.</p></div></div>
           <div className={`resume-dropzone ${user?.resume_name ? 'has-file' : ''} ${uploading ? 'uploading' : ''}`} onClick={() => !uploading && fileRef.current?.click()}>
             {uploading ? <><span><UploadCloud /></span><strong>Uploading resume…</strong><small>Please keep this page open.</small></> : user?.resume_name ? <><span className="file-icon"><FileText /></span><strong>{user.resume_name}</strong><small>Click to replace your resume</small></> : <><span><UploadCloud /></span><strong>Upload your resume</strong><small>A resume is required to apply for jobs.</small></>}

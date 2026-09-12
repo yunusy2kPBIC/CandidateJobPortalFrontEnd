@@ -2,7 +2,7 @@ import { MailCheck, RotateCcw, ShieldCheck } from 'lucide-react'
 import { FormEvent, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { clearPendingVerification, readPendingVerification, savePendingVerification } from '../auth/pendingVerification'
-import { defaultRouteForRole } from '../auth/roles'
+import { defaultRouteForRole, portalRoles } from '../auth/roles'
 import { Alert } from '../components/Feedback'
 import PublicLayout from '../components/PublicLayout'
 import { useAuth } from '../context/AuthContext'
@@ -63,7 +63,7 @@ export default function VerifyEmailPage() {
     try {
       const user = await verifyEmail(email.trim(), code)
       clearPendingVerification()
-      navigate(defaultRouteForRole(user.role), { replace: true })
+      navigate(user.role === portalRoles.candidate ? '/profile' : defaultRouteForRole(user.role), { replace: true })
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to verify this email')
     } finally {

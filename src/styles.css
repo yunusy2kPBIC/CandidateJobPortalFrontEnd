@@ -252,6 +252,17 @@ label input, label select, label textarea, label .password-field, label .validat
 .human-check > div { color: var(--blue); display: flex; flex-direction: column; align-items: center; }
 .human-check small { font-size: .62rem; color: #79869a; }
 .terms-check { font-size: .9rem; }
+.terms-check > span { display: block; white-space: nowrap; }
+.terms-check small { display: block; margin-top: 4px; color: #6c7b90; font-weight: 400; line-height: 1.4; white-space: normal; }
+.privacy-inline-trigger { display: inline; width: auto; margin: 0 .2em; padding: 0; color: var(--blue); background: transparent; border: 0; font-weight: 700; text-align: left; vertical-align: baseline; cursor: pointer; }
+.privacy-inline-trigger:hover { text-decoration: underline; }
+.privacy-inline-trigger:disabled { color: #8693a5; cursor: wait; }
+.privacy-modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgba(10, 28, 52, .68); backdrop-filter: blur(3px); }
+.privacy-modal { width: min(860px, 100%); max-height: min(86vh, 860px); display: flex; flex-direction: column; overflow: hidden; background: white; border-radius: 16px; box-shadow: 0 28px 80px rgba(7, 24, 48, .32); }
+.privacy-modal-heading { padding: 22px 24px; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; border-bottom: 1px solid #e1e8f1; }
+.privacy-modal-heading h2 { margin: 7px 0 0; color: #142f51; font-size: 1.45rem; }
+.privacy-modal-content { padding: 0 24px 24px; overflow-y: auto; overscroll-behavior: contain; }
+.privacy-modal-actions { padding: 16px 24px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e1e8f1; background: #f8fafd; }
 .register-aside { padding: 34px; background: linear-gradient(150deg, #f7faff, #edf4ff); }
 .register-aside h2 { margin: 25px 0 7px; font-size: 1.55rem; }
 .register-aside > p { margin-bottom: 27px; }
@@ -451,6 +462,7 @@ td small { color: #8993a5; }
 .profile-contact span { display: flex; align-items: flex-start; gap: 9px; font-size: .75rem; color: #59677d; word-break: break-word; }
 .profile-contact svg { width: 15px; color: var(--blue); }
 .profile-form, .resume-panel { padding: 27px; }
+.resume-panel.resume-required { border-color: #e7a4aa; box-shadow: 0 0 0 3px rgba(180, 35, 47, .07); }
 .form-section-heading { display: flex; gap: 13px; align-items: center; margin-bottom: 24px; }
 .form-section-heading > span { width: 42px; height: 42px; display: grid; place-items: center; color: var(--blue); background: var(--blue-soft); border-radius: 10px; }
 .form-section-heading svg { width: 20px; }
@@ -526,7 +538,9 @@ td small { color: #8993a5; }
 .admin-job-form { margin-bottom: 18px; overflow: hidden; }
 .admin-job-form > .panel-heading { align-items: center; }
 .admin-job-fields { padding: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
+.admin-job-date-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .admin-job-fields input:disabled { color: #5d6c82; background: #eef2f7; cursor: not-allowed; opacity: 1; }
+.field-character-count { display: block; margin-top: 6px; color: #718096; font-size: .75rem; font-weight: 500; text-align: right; }
 .recruitment-request-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .cooperative-training-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .admin-job-wide { grid-column: 1 / -1; }
@@ -621,6 +635,13 @@ td small { color: #8993a5; }
   .verification-resend { align-items: flex-start; flex-direction: column; }
   .register-card { padding: 25px 20px; }
   .register-aside { padding: 26px 22px; }
+  .terms-check > span { white-space: normal; }
+  .privacy-modal-backdrop { padding: 10px; }
+  .privacy-modal { max-height: 94vh; border-radius: 12px; }
+  .privacy-modal-heading { padding: 18px; }
+  .privacy-modal-content { padding: 0 18px 18px; }
+  .privacy-modal-actions { padding: 14px 18px; flex-direction: column-reverse; }
+  .privacy-modal-actions .button { width: 100%; }
   .register-heading { display: block; }
   .register-heading a { margin-top: 10px; }
   .register-form { grid-template-columns: 1fr; }
@@ -669,6 +690,7 @@ td small { color: #8993a5; }
   .admin-tabs { border-radius: 9px; }
   .admin-tabs button { padding: 0 12px; }
   .admin-job-fields { padding: 19px 17px; }
+  .admin-job-date-fields { grid-template-columns: 1fr; gap: 18px; }
   .admin-form-actions { padding: 0 17px 19px; }
   .admin-form-actions .button { width: 100%; }
   .admin-table-panel .panel-heading { align-items: flex-start; flex-direction: column; }
