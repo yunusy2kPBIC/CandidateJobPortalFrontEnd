@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { Alert } from '../components/Feedback'
+import { RichTextContent } from '../components/RichText'
 import { useAuth } from '../context/AuthContext'
 import { api, type Job } from '../services/api'
 
@@ -78,7 +79,6 @@ export default function JobDetailsPage() {
   if (loading) return <div className="page-loader"><span className="loader" /></div>
   if (!job) return <div className="page-container details-page"><Link className="back-link" to="/jobs"><ArrowLeft size={17} />Back to jobs</Link><Alert type="error" message={loadError || 'This job could not be found.'} /></div>
 
-  const requirements = job.requirements.split('\n').map((requirement) => requirement.trim()).filter(Boolean)
   const applicationRequirements = [
     { label: 'Nationality selected', met: Boolean(user?.nationality) },
     { label: 'Gender selected', met: Boolean(user?.gender) },
@@ -107,11 +107,11 @@ export default function JobDetailsPage() {
           </section>
           <section className="job-detail-section">
             <div className="job-detail-heading"><span><AlignLeft /></span><div><small>Your impact</small><h2>Description</h2></div></div>
-            <p className="job-detail-copy">{job.description}</p>
+            <RichTextContent className="job-detail-copy job-detail-rich-text" value={job.description} />
           </section>
           <section className="job-detail-section">
             <div className="job-detail-heading"><span><ListChecks /></span><div><small>What we are looking for</small><h2>Requirements</h2></div></div>
-            <ul>{requirements.map((requirement) => <li key={requirement}><CheckCircle2 size={17} />{requirement}</li>)}</ul>
+            <RichTextContent className="job-detail-rich-text job-requirements-content" value={job.requirements} legacyList />
           </section>
           <section className="job-promise">
             <span className="job-promise-icon"><HeartHandshake /></span>

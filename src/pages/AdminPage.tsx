@@ -21,6 +21,7 @@ import { portalRoles } from '../auth/roles'
 import { Alert, EmptyState } from '../components/Feedback'
 import CooperativeTrainingPanel from '../components/CooperativeTrainingPanel'
 import PageHeader from '../components/PageHeader'
+import { normalizeRichText, RichTextEditor, richTextCharacterCount } from '../components/RichText'
 import { useAuth } from '../context/AuthContext'
 import {
   api,
@@ -338,19 +339,32 @@ export default function AdminPage() {
 
   const saveJob = async (event: FormEvent) => {
     event.preventDefault()
+    const description = normalizeRichText(jobForm.description)
+    const requirements = normalizeRichText(jobForm.requirements, true)
+    if (richTextCharacterCount(description) === 0 || richTextCharacterCount(requirements) === 0) {
+      setError('Description and requirements are required.')
+      setNotice(null)
+      return
+    }
+    if (description.length > 10000 || requirements.length > 10000) {
+      setError('Description and requirements must each remain within 10,000 characters, including formatting.')
+      setNotice(null)
+      return
+    }
+    const payload = { ...jobForm, description, requirements }
     setSaving(editingJob ? `edit-job-${editingJob.id}` : 'create-job')
     setError(null)
     setNotice(null)
     try {
       if (editingJob) {
-        const updated = await api.updateAdminJob(editingJob.id, jobForm)
+        const updated = await api.updateAdminJob(editingJob.id, payload)
         setJobs((current) => current.map((item) => item.id === updated.id ? updated : item))
         if (isJobAvailable(updated) !== isJobAvailable(editingJob)) {
           setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (isJobAvailable(updated) ? 1 : -1) } : current)
         }
         setNotice(`Job “${updated.title}” was updated successfully.`)
       } else {
-        const created = await api.createAdminJob(jobForm)
+        const created = await api.createAdminJob(payload)
         setJobs((current) => [created, ...current])
         setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (isJobAvailable(created) ? 1 : 0) } : current)
         setNotice(`Job “${created.title}” was ${created.is_published ? 'published' : 'saved as unpublished'} successfully.`)
@@ -529,6 +543,7 @@ export default function AdminPage() {
   const recruitmentNationalityOptions = requestForm.nationality && !jobOptions.nationalities.includes(requestForm.nationality)
     ? [requestForm.nationality, ...jobOptions.nationalities]
     : jobOptions.nationalities
+  const iqamaProfessionRequired = !requestForm.iqama_number.startsWith('1')
 
   return (
     <div className="page-container admin-page">
@@ -577,8 +592,8 @@ export default function AdminPage() {
                   <label>Expiry date<input required type="date" min={jobForm.posted_at} value={jobForm.expires_at} onChange={(event) => setJobForm({ ...jobForm, expires_at: event.target.value })} /></label>
                 </div>
                 <label className="admin-job-wide">Summary<textarea required rows={2} maxLength={2000} value={jobForm.summary} onChange={(event) => setJobForm({ ...jobForm, summary: event.target.value })} /><small className="field-character-count">{jobForm.summary.length.toLocaleString()} / 2,000 characters</small></label>
-                <label className="admin-job-wide">Description<textarea required rows={4} maxLength={10000} value={jobForm.description} onChange={(event) => setJobForm({ ...jobForm, description: event.target.value })} /><small className="field-character-count">{jobForm.description.length.toLocaleString()} / 10,000 characters</small></label>
-                <label className="admin-job-wide">Requirements<textarea required rows={4} maxLength={10000} value={jobForm.requirements} onChange={(event) => setJobForm({ ...jobForm, requirements: event.target.value })} placeholder="Enter one requirement per line" /><small className="field-character-count">{jobForm.requirements.length.toLocaleString()} / 10,000 characters</small></label>
+                <RichTextEditor className="admin-job-wide" label="Description" required maxLength={10000} value={jobForm.description} onChange={(description) => setJobForm((current) => ({ ...current, description }))} placeholder="Describe the role, responsibilities, and impact." />
+                <RichTextEditor className="admin-job-wide" label="Requirements" required legacyList maxLength={10000} value={jobForm.requirements} onChange={(requirements) => setJobForm((current) => ({ ...current, requirements }))} placeholder="Add the qualifications and experience required for this role." />
                 <label className="checkbox-label"><input type="checkbox" checked={jobForm.is_published} onChange={(event) => setJobForm({ ...jobForm, is_published: event.target.checked })} />{editingJob ? 'Published' : 'Publish immediately'}</label>
               </div>
               <div className="admin-form-actions"><button className="button button-primary" disabled={saving === 'create-job' || saving === `edit-job-${editingJob?.id}`}><Save size={17} />{saving ? 'Saving…' : editingJob ? 'Save changes' : 'Publish job'}</button></div>
@@ -600,8 +615,8 @@ export default function AdminPage() {
                 <label>Driver license type<select value={requestForm.driver_license_type} onChange={(event) => setRequestForm({ ...requestForm, driver_license_type: event.target.value as RecruitmentRequestPayload['driver_license_type'] })}><option>Saudi License</option><option>Valid GCC License</option><option>Other License</option><option>None</option></select></label>
                 <label>Mobile number<input required type="tel" inputMode="numeric" minLength={9} maxLength={14} pattern="(?:966|00966|0)?5[0-9]{8}" title="Enter a Saudi mobile number such as 05XXXXXXXX or 9665XXXXXXXX" value={requestForm.mobile_number} onChange={(event) => setRequestForm({ ...requestForm, mobile_number: event.target.value.replace(/\D/g, '').slice(0, 14) })} placeholder="9665XXXXXXXX" /></label>
                 <label>Email address<input required type="email" maxLength={255} value={requestForm.email_address} onChange={(event) => setRequestForm({ ...requestForm, email_address: event.target.value })} /></label>
-                <label>Iqama number<input required inputMode="numeric" minLength={10} maxLength={10} pattern="2[0-9]{9}" title="Enter a 10-digit Iqama number beginning with 2" value={requestForm.iqama_number} onChange={(event) => setRequestForm({ ...requestForm, iqama_number: event.target.value.replace(/\D/g, '').slice(0, 10) })} /></label>
-                <label>Iqama profession<input required maxLength={150} value={requestForm.iqama_profession} onChange={(event) => setRequestForm({ ...requestForm, iqama_profession: event.target.value })} /></label>
+                <label>ID/Iqama number<input required inputMode="numeric" minLength={10} maxLength={10} pattern="[12][0-9]{9}" title="Enter a 10-digit ID or Iqama number beginning with 1 or 2" value={requestForm.iqama_number} onChange={(event) => setRequestForm({ ...requestForm, iqama_number: event.target.value.replace(/\D/g, '').slice(0, 10) })} /></label>
+                <label>{`Iqama profession${iqamaProfessionRequired ? '' : ' (optional)'}`}<input required={iqamaProfessionRequired} maxLength={150} value={requestForm.iqama_profession} onChange={(event) => setRequestForm({ ...requestForm, iqama_profession: event.target.value })} /></label>
                 <label>Current employer<input list="employer-options" maxLength={180} value={requestForm.current_employer} onChange={(event) => setRequestForm({ ...requestForm, current_employer: event.target.value })} /><datalist id="employer-options">{employerOptions.map((value) => <option key={value} value={value} />)}</datalist></label>
                 <label>Date of birth<input required type="date" max={latestAdultBirthDate()} title="Applicant must be at least 18 years old" value={requestForm.date_of_birth} onChange={(event) => setRequestForm({ ...requestForm, date_of_birth: event.target.value })} /></label>
                 <label>City (current location)<input required list="request-city-options" maxLength={100} value={requestForm.city} onChange={(event) => setRequestForm({ ...requestForm, city: event.target.value })} /><datalist id="request-city-options">{cityOptions.map((value) => <option key={value} value={value} />)}</datalist></label>

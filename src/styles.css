@@ -418,9 +418,19 @@ label input, label select, label textarea, label .password-field, label .validat
 .job-detail-heading small, .job-promise small { display: block; margin-bottom: 2px; color: #7a889d; font-size: .68rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
 .job-detail-heading h2, .job-promise h2 { margin: 0; color: #17345e; font-size: 1.18rem; }
 .job-detail-copy { margin: 0; color: #506078; line-height: 1.75; white-space: pre-line; }
-.prose-panel ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
-.prose-panel li { min-height: 45px; padding: 10px 12px; display: flex; align-items: center; gap: 9px; color: #40506a; background: #f7fafc; border: 1px solid #e4eaf2; border-radius: 9px; }
-.prose-panel li svg { flex: 0 0 auto; color: var(--green); }
+.job-detail-rich-text { color: #506078; line-height: 1.75; white-space: normal; }
+.job-detail-rich-text > :first-child { margin-top: 0; }
+.job-detail-rich-text > :last-child { margin-bottom: 0; }
+.job-detail-rich-text p, .job-detail-rich-text div { margin: 0 0 12px; }
+.job-detail-rich-text h2, .job-detail-rich-text h3 { margin: 20px 0 8px; color: #17345e; }
+.job-detail-rich-text h2 { font-size: 1.12rem; }
+.job-detail-rich-text h3 { font-size: 1rem; }
+.job-detail-rich-text ul, .job-detail-rich-text ol { margin: 12px 0; padding-left: 24px; }
+.job-detail-rich-text li { margin: 6px 0; padding-left: 3px; }
+.job-detail-rich-text blockquote { margin: 15px 0; padding: 10px 16px; color: #435875; background: #f5f8fd; border-left: 3px solid #76a6e8; }
+.job-detail-rich-text a { font-weight: 700; text-decoration: underline; overflow-wrap: anywhere; }
+.job-requirements-content ul { list-style: disc; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 28px; }
+.job-requirements-content ul li { margin: 0; }
 .job-promise { margin-top: 30px; padding: clamp(22px, 3vw, 30px); display: flex; align-items: flex-start; gap: 17px; border: 1px solid #cfe0f6; border-radius: 14px; background: linear-gradient(135deg, #f0f6ff 0%, #f9fcff 55%, #eef9f4 100%); }
 .job-promise-icon { width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; color: white; border-radius: 13px; background: linear-gradient(135deg, var(--blue), #29906a); box-shadow: 0 9px 20px rgba(7,91,216,.2); }
 .job-promise-icon svg { width: 25px; }
@@ -543,6 +553,23 @@ td small { color: #8993a5; }
 .admin-job-date-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .admin-job-fields input:disabled { color: #5d6c82; background: #eef2f7; cursor: not-allowed; opacity: 1; }
 .field-character-count { display: block; margin-top: 6px; color: #718096; font-size: .75rem; font-weight: 500; text-align: right; }
+.rich-text-label { display: block; color: #1b2d50; font-size: .9rem; font-weight: 600; }
+.rich-text-label em { color: #b4232f; font-style: normal; }
+.rich-text-editor { margin-top: 7px; overflow: hidden; border: 1px solid #cfd8e8; border-radius: 7px; background: white; transition: border .16s ease, box-shadow .16s ease; }
+.rich-text-editor:focus-within { border-color: #4f8eea; box-shadow: 0 0 0 3px rgba(11, 110, 243, .08); }
+.rich-text-editor-limit { border-color: #d56a73; }
+.rich-text-toolbar { min-height: 42px; padding: 5px 8px; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; background: #f8fafd; border-bottom: 1px solid #e3e9f2; }
+.rich-text-toolbar button { width: 32px; height: 30px; padding: 0; display: grid; place-items: center; color: #405575; background: transparent; border: 0; border-radius: 5px; cursor: pointer; }
+.rich-text-toolbar button:hover { color: var(--blue); background: #e8f1ff; }
+.rich-text-toolbar button:focus-visible { outline: 3px solid rgba(11, 110, 243, .18); outline-offset: 1px; }
+.rich-text-toolbar-separator { width: 1px; height: 20px; margin: 0 4px; background: #dbe3ee; }
+.rich-text-surface { min-height: 150px; padding: 13px 14px; color: var(--ink); font-size: .9rem; font-weight: 400; line-height: 1.6; outline: 0; overflow-wrap: anywhere; }
+.rich-text-surface:empty::before { color: #a1aabd; content: attr(data-placeholder); pointer-events: none; }
+.rich-text-surface p, .rich-text-surface div { margin: 0 0 8px; }
+.rich-text-surface p:last-child, .rich-text-surface div:last-child { margin-bottom: 0; }
+.rich-text-surface ul, .rich-text-surface ol { margin: 8px 0; padding-left: 25px; }
+.rich-text-surface blockquote { margin: 10px 0; padding-left: 12px; color: #51627b; border-left: 3px solid #9dbce6; }
+.character-count-limit { color: #b4232f; }
 .recruitment-request-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .cooperative-training-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .admin-job-wide { grid-column: 1 / -1; }
