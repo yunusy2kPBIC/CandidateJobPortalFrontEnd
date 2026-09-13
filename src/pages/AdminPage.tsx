@@ -120,15 +120,17 @@ const emptyRecruitmentRequest: RecruitmentRequestPayload = {
   comments: '',
 }
 
-const nationalityOptions = ['Saudi', 'Indian', 'Egyptian', 'Pakistani', 'Other']
 const cityOptions = ['Riyadh', 'Jeddah', 'Dammam', 'Al Khobar', 'Other']
 const employerOptions = ['ABC Technologies', 'Global Solutions', 'Tech Services Co.', 'Digital Innovations', 'Smart Systems', 'Other', 'Not currently employed']
 const preferredPositionSuggestions = ['Applications Project Manager', 'Business Analyst', 'System Administrator', 'Software Developer', 'IT Support Engineer']
+const preferredNationality = (values: string[]) =>
+  values.find((value) => value.toLowerCase().startsWith('saudi')) ?? values[0] ?? emptyRecruitmentRequest.nationality
 
 const emptyJobOptions: AdminJobOptions = {
   countries: [],
   cities: [],
   cities_by_country: {},
+  nationalities: [],
   divisions: [],
   job_functions: [],
   career_levels: [],
@@ -299,7 +301,7 @@ export default function AdminPage() {
   const openCreateRequest = () => {
     selectTab('requests')
     setEditingRequest(null)
-    setRequestForm(emptyRecruitmentRequest)
+    setRequestForm({ ...emptyRecruitmentRequest, nationality: preferredNationality(jobOptions.nationalities) })
     setShowRequestForm(true)
   }
 
@@ -524,6 +526,9 @@ export default function AdminPage() {
   const selectableJobCities = jobForm.city && !availableJobCities.includes(jobForm.city)
     ? [jobForm.city, ...availableJobCities]
     : availableJobCities
+  const recruitmentNationalityOptions = requestForm.nationality && !jobOptions.nationalities.includes(requestForm.nationality)
+    ? [requestForm.nationality, ...jobOptions.nationalities]
+    : jobOptions.nationalities
 
   return (
     <div className="page-container admin-page">
@@ -590,7 +595,7 @@ export default function AdminPage() {
               <div className="admin-job-fields recruitment-request-fields">
                 <label>Preferred position<input required list="preferred-position-options" value={requestForm.preferred_position} onChange={(event) => setRequestForm({ ...requestForm, preferred_position: event.target.value })} /><datalist id="preferred-position-options">{Array.from(new Set([...jobs.map((job) => job.title), ...preferredPositionSuggestions])).map((value) => <option key={value} value={value} />)}</datalist></label>
                 <label>Name<input required maxLength={255} value={requestForm.name} onChange={(event) => setRequestForm({ ...requestForm, name: event.target.value })} /></label>
-                <label>Nationality<input required list="nationality-options" value={requestForm.nationality} onChange={(event) => setRequestForm({ ...requestForm, nationality: event.target.value })} /><datalist id="nationality-options">{nationalityOptions.map((value) => <option key={value} value={value} />)}</datalist></label>
+                <label>Nationality<select required value={requestForm.nationality} onChange={(event) => setRequestForm({ ...requestForm, nationality: event.target.value })}><option value="" disabled>Select nationality</option>{recruitmentNationalityOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
                 <label>Gender<select value={requestForm.gender} onChange={(event) => setRequestForm({ ...requestForm, gender: event.target.value as RecruitmentRequestPayload['gender'] })}><option>Male</option><option>Female</option><option>Other</option></select></label>
                 <label>Driver license type<select value={requestForm.driver_license_type} onChange={(event) => setRequestForm({ ...requestForm, driver_license_type: event.target.value as RecruitmentRequestPayload['driver_license_type'] })}><option>Saudi License</option><option>Valid GCC License</option><option>Other License</option><option>None</option></select></label>
                 <label>Mobile number<input required type="tel" inputMode="numeric" minLength={9} maxLength={14} pattern="(?:966|00966|0)?5[0-9]{8}" title="Enter a Saudi mobile number such as 05XXXXXXXX or 9665XXXXXXXX" value={requestForm.mobile_number} onChange={(event) => setRequestForm({ ...requestForm, mobile_number: event.target.value.replace(/\D/g, '').slice(0, 14) })} placeholder="9665XXXXXXXX" /></label>
@@ -605,7 +610,7 @@ export default function AdminPage() {
                 <label>Current salary (SAR)<input required type="number" min={0} max={100000000} step="0.01" value={requestForm.current_salary} onChange={(event) => setRequestForm({ ...requestForm, current_salary: Number(event.target.value) })} /></label>
                 <label className="admin-job-wide recruitment-comments">Comments<textarea rows={4} maxLength={5000} value={requestForm.comments} onChange={(event) => setRequestForm({ ...requestForm, comments: event.target.value })} /></label>
               </div>
-              <div className="admin-form-actions recruitment-form-actions"><button type="button" className="button button-secondary" onClick={() => setRequestForm(emptyRecruitmentRequest)}>Reset</button><button type="button" className="button button-secondary" onClick={closeRequestForm}>Cancel</button><button className="button button-primary" disabled={saving === 'create-request' || saving === `edit-request-${editingRequest?.id}`}><Save size={17} />{saving ? 'Saving...' : editingRequest ? 'Save changes' : 'Submit request'}</button></div>
+              <div className="admin-form-actions recruitment-form-actions"><button type="button" className="button button-secondary" onClick={() => setRequestForm({ ...emptyRecruitmentRequest, nationality: preferredNationality(jobOptions.nationalities) })}>Reset</button><button type="button" className="button button-secondary" onClick={closeRequestForm}>Cancel</button><button className="button button-primary" disabled={saving === 'create-request' || saving === `edit-request-${editingRequest?.id}`}><Save size={17} />{saving ? 'Saving...' : editingRequest ? 'Save changes' : 'Submit request'}</button></div>
             </form>}
             <section className="panel admin-table-panel">
               <div className="panel-heading"><div><h2>Recruitment requests</h2><p>SharePoint-only records based on the recruitment request form.</p></div>{!showRequestForm && !requestsError && <button className="button button-secondary button-small" onClick={openCreateRequest}><Plus size={16} />Add request</button>}</div>

@@ -7,7 +7,7 @@ import { savePendingVerification } from '../auth/pendingVerification'
 import { useAuth } from '../context/AuthContext'
 import { api, type LookupOptions, type PrivacyNotice } from '../services/api'
 
-const emptyLookups: LookupOptions = { countries: [], divisions: [], job_functions: [], career_levels: [] }
+const emptyLookups: LookupOptions = { countries: [], nationalities: [], divisions: [], job_functions: [], career_levels: [] }
 type EmailAvailabilityState = 'idle' | 'checking' | 'available' | 'pending' | 'unavailable' | 'error'
 
 const initialForm = {
@@ -53,10 +53,21 @@ export default function RegisterPage() {
   const countryOptions = form.country && !lookupCountries.includes(form.country)
     ? [form.country, ...lookupCountries]
     : lookupCountries
+  const nationalityOptions = lookups.nationalities.length ? lookups.nationalities : [form.nationality]
 
   useEffect(() => {
     let active = true
-    api.lookups().then((values) => { if (active) setLookups(values) }).catch(() => undefined)
+    api.lookups().then((values) => {
+      if (!active) return
+      setLookups(values)
+      setForm((current) => {
+        if (current.is_student || values.nationalities.includes(current.nationality)) return current
+        const preferred = values.nationalities.find((value) => value.toLowerCase().startsWith('saudi'))
+          ?? values.nationalities[0]
+          ?? current.nationality
+        return { ...current, nationality: preferred }
+      })
+    }).catch(() => undefined)
     return () => { active = false }
   }, [])
 
@@ -170,7 +181,7 @@ export default function RegisterPage() {
             <label>Phone number <em>*</em><input type="tel" value={form.phone} onChange={(event) => update('phone', event.target.value)} required /></label>
             <label className="full-field">Country/region of residence <em>*</em><select value={form.country} onChange={(event) => update('country', event.target.value)}>{countryOptions.map((country) => <option key={country}>{country}</option>)}</select></label>
             <label className={form.is_student ? 'full-field' : undefined}>Gender <em>*</em><select value={form.gender} onChange={(event) => update('gender', event.target.value)} required><option value="" disabled>Select gender</option><option>Male</option><option>Female</option><option>Other</option></select></label>
-            {!form.is_student && <label>Nationality <em>*</em><select value={form.nationality} onChange={(event) => update('nationality', event.target.value)} required><option>Saudi Arabia</option><option>GCC</option><option>Others</option></select></label>}
+            {!form.is_student && <label>Nationality <em>*</em><select value={form.nationality} onChange={(event) => update('nationality', event.target.value)} required><option value="" disabled>Select nationality</option>{nationalityOptions.map((nationality) => <option key={nationality} value={nationality}>{nationality}</option>)}</select></label>}
             <label className="checkbox-label full-field student-registration-check"><input type="checkbox" checked={form.is_student} onChange={(event) => update('is_student', event.target.checked)} /><span><strong>Register as a Student</strong><small>Select this option to apply for the Cooperative Training program instead of regular job opportunities.</small></span></label>
             <div className="human-check full-field">
               <button type="button" className={human ? 'checked' : ''} onClick={() => setHuman((value) => !value)}><span>{human && <Check size={20} />}</span>I am human</button>

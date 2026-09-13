@@ -5,7 +5,7 @@ import { EmptyState } from '../components/Feedback'
 import { api, type JobList, type LookupOptions } from '../services/api'
 
 const emptyData: JobList = { items: [], total: 0, filters: { countries: [], cities: [], divisions: [], job_functions: [], career_levels: [] } }
-const emptyLookups: LookupOptions = { countries: [], divisions: [], job_functions: [], career_levels: [] }
+const emptyLookups: LookupOptions = { countries: [], nationalities: [], divisions: [], job_functions: [], career_levels: [] }
 const initialFilters = { keywords: '', country: '', city: '', division: '', job_function: '', career_level: '', sort: 'recent' }
 
 export default function JobsPage() {

@@ -112,6 +112,7 @@ export type LookupCountry = {
 
 export type LookupOptions = {
   countries: LookupCountry[]
+  nationalities: string[]
   divisions: string[]
   job_functions: string[]
   career_levels: string[]
@@ -173,6 +174,7 @@ export type AdminJobOptions = {
   countries: string[]
   cities: string[]
   cities_by_country: Record<string, string[]>
+  nationalities: string[]
   divisions: string[]
   job_functions: string[]
   career_levels: AdminJobPayload['career_level'][]

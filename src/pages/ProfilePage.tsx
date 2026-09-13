@@ -8,7 +8,7 @@ import { api, type LookupOptions, type User } from '../services/api'
 
 type ProfileForm = Omit<User, 'id' | 'email' | 'role' | 'is_email_verified' | 'resume_name' | 'created_at'>
 
-const emptyLookups: LookupOptions = { countries: [], divisions: [], job_functions: [], career_levels: [] }
+const emptyLookups: LookupOptions = { countries: [], nationalities: [], divisions: [], job_functions: [], career_levels: [] }
 
 export default function ProfilePage() {
   const { user, setUser, refreshUser } = useAuth()
@@ -60,7 +60,7 @@ export default function ProfilePage() {
   const initials = `${user?.first_name[0] ?? ''}${user?.last_name[0] ?? ''}`
   const administrativeProfile = isRecruitmentAdministrator(user?.role)
   const studentProfile = user?.role === portalRoles.student
-  const candidateNeedsResume = user?.role === portalRoles.candidate && !user.resume_name
+  const candidateProfile = user?.role === portalRoles.candidate
   const compactProfile = administrativeProfile || studentProfile
   const citiesByCountry = Object.fromEntries(lookups.countries.map((country) => [country.name, country.cities]))
   const lookupCountries = lookups.countries.map((country) => country.name)
@@ -74,6 +74,26 @@ export default function ProfilePage() {
   const selectableCountries = form.country && !countryOptions.includes(form.country)
     ? [form.country, ...countryOptions]
     : countryOptions
+  const nationalityOptions = form.nationality && !lookups.nationalities.includes(form.nationality)
+    ? [form.nationality, ...lookups.nationalities]
+    : lookups.nationalities
+  const validGenders = ['Male', 'Female', 'Other']
+  const formGenderValid = validGenders.includes(form.gender)
+  const savedGenderValid = validGenders.includes(user?.gender ?? '')
+  const formNationalityValid = lookups.nationalities.length > 0
+    ? lookups.nationalities.includes(form.nationality)
+    : Boolean(form.nationality)
+  const savedNationalityValid = lookups.nationalities.length > 0
+    ? lookups.nationalities.includes(user?.nationality ?? '')
+    : Boolean(user?.nationality)
+  const candidateNeedsResume = candidateProfile && !user?.resume_name
+  const missingCandidateRequirements = candidateProfile
+    ? [
+        !savedGenderValid ? 'Gender' : null,
+        !savedNationalityValid ? 'Nationality' : null,
+        candidateNeedsResume ? 'Resume' : null,
+      ].filter((item): item is string => Boolean(item))
+    : []
   const profileSubtitle = administrativeProfile
     ? 'Keep your administrator contact information up to date.'
     : studentProfile
@@ -82,7 +102,7 @@ export default function ProfilePage() {
   return (
     <div className="page-container profile-page">
       <PageHeader title="Profile" subtitle={profileSubtitle} />
-      {candidateNeedsResume && <Alert type="error" message="Resume upload is mandatory before you can apply for jobs. Upload a PDF, DOC, or DOCX file below to complete your candidate profile." />}
+      {missingCandidateRequirements.length > 0 && <Alert type="error" message={`Complete these mandatory profile items before applying for jobs: ${missingCandidateRequirements.join(', ')}.`} />}
       {message && <Alert type={message.type} message={message.text} />}
       <div className={`profile-layout ${compactProfile ? 'admin-profile-layout' : ''}`}>
         <aside className="panel profile-summary">
@@ -99,8 +119,8 @@ export default function ProfilePage() {
             <label>Phone number<span className="phone-field"><select value={form.country_code} onChange={(event) => update('country_code', event.target.value)}><option>+966</option><option>+971</option><option>+973</option><option>+965</option><option>+1</option></select><input value={form.phone} onChange={(event) => update('phone', event.target.value)} /></span></label>
             <label>City<select value={form.city} onChange={(event) => update('city', event.target.value)}><option value="" disabled>Select city</option>{cityOptions.map((city) => <option key={city} value={city}>{city}</option>)}</select></label>
             <label>Country<select value={form.country} onChange={(event) => updateCountry(event.target.value)}><option value="" disabled>Select country</option>{selectableCountries.map((country) => <option key={country} value={country}>{country}</option>)}</select></label>
-            {(user?.role === portalRoles.candidate || studentProfile) && <label className={studentProfile ? 'full-field' : undefined}>Gender <em>*</em><select value={form.gender} onChange={(event) => update('gender', event.target.value)} required><option value="" disabled>Select gender</option><option>Male</option><option>Female</option><option>Other</option></select></label>}
-            {user?.role === portalRoles.candidate && <label>Nationality <em>*</em><select value={form.nationality} onChange={(event) => update('nationality', event.target.value)} required><option value="" disabled>Select nationality</option><option>Saudi Arabia</option><option>GCC</option><option>Others</option></select></label>}
+            {(candidateProfile || studentProfile) && <label className={studentProfile ? 'full-field' : undefined}>Gender <em>*</em><select value={form.gender} onChange={(event) => update('gender', event.target.value)} required aria-invalid={candidateProfile && !formGenderValid}><option value="" disabled>Select gender</option><option>Male</option><option>Female</option><option>Other</option></select>{candidateProfile && !formGenderValid && <small className="profile-validation-message">Select your gender to complete your candidate profile.</small>}</label>}
+            {candidateProfile && <label>Nationality <em>*</em><select value={form.nationality} onChange={(event) => update('nationality', event.target.value)} required aria-invalid={!formNationalityValid}><option value="" disabled>Select nationality</option>{nationalityOptions.map((nationality) => <option key={nationality} value={nationality}>{nationality}</option>)}</select>{!formNationalityValid && <small className="profile-validation-message">Select a valid nationality to complete your candidate profile.</small>}</label>}
             <label className="full-field">About me<textarea rows={5} value={form.about} onChange={(event) => update('about', event.target.value)} placeholder="Share your experience, strengths and career goals." /></label>
           </div>
           <button className="button button-primary save-button" disabled={saving}><Save size={17} />{saving ? 'Saving…' : 'Save changes'}</button>

@@ -463,6 +463,8 @@ td small { color: #8993a5; }
 .profile-contact svg { width: 15px; color: var(--blue); }
 .profile-form, .resume-panel { padding: 27px; }
 .resume-panel.resume-required { border-color: #e7a4aa; box-shadow: 0 0 0 3px rgba(180, 35, 47, .07); }
+.profile-validation-message { display: block; margin-top: 6px; color: #b4232f; font-size: .78rem; font-style: normal; font-weight: 600; }
+.profile-form select[aria-invalid="true"] { border-color: #d56a73; }
 .form-section-heading { display: flex; gap: 13px; align-items: center; margin-bottom: 24px; }
 .form-section-heading > span { width: 42px; height: 42px; display: grid; place-items: center; color: var(--blue); background: var(--blue-soft); border-radius: 10px; }
 .form-section-heading svg { width: 20px; }
