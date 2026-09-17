@@ -7,7 +7,7 @@ import { savePendingVerification } from '../auth/pendingVerification'
 import { useAuth } from '../context/AuthContext'
 import { api, type LookupOptions, type PrivacyNotice } from '../services/api'
 
-const emptyLookups: LookupOptions = { countries: [], nationalities: [], divisions: [], job_functions: [], career_levels: [] }
+const emptyLookups: LookupOptions = { countries: [], residence_countries: [], nationalities: [], divisions: [], job_functions: [], career_levels: [] }
 type EmailAvailabilityState = 'idle' | 'checking' | 'available' | 'pending' | 'unavailable' | 'error'
 
 const initialForm = {
@@ -49,7 +49,7 @@ export default function RegisterPage() {
     /[^A-Za-z0-9]/.test(form.password),
   ], [form.password])
   const passwordScore = passwordChecks.filter(Boolean).length
-  const lookupCountries = lookups.countries.map((country) => country.name)
+  const lookupCountries = lookups.residence_countries
   const countryOptions = form.country && !lookupCountries.includes(form.country)
     ? [form.country, ...lookupCountries]
     : lookupCountries

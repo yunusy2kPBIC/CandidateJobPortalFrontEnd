@@ -112,6 +112,7 @@ export type LookupCountry = {
 
 export type LookupOptions = {
   countries: LookupCountry[]
+  residence_countries: string[]
   nationalities: string[]
   divisions: string[]
   job_functions: string[]

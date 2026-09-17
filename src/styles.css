@@ -432,6 +432,7 @@ label input, label select, label textarea, label .password-field, label .validat
 .job-requirements-content ul { list-style: disc; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 28px; }
 .job-requirements-content ul li { margin: 0; }
 .job-promise { margin-top: 30px; padding: clamp(22px, 3vw, 30px); display: flex; align-items: flex-start; gap: 17px; border: 1px solid #cfe0f6; border-radius: 14px; background: linear-gradient(135deg, #f0f6ff 0%, #f9fcff 55%, #eef9f4 100%); }
+.job-promise-header { margin: 0 0 30px; }
 .job-promise-icon { width: 50px; height: 50px; display: grid; place-items: center; flex: 0 0 auto; color: white; border-radius: 13px; background: linear-gradient(135deg, var(--blue), #29906a); box-shadow: 0 9px 20px rgba(7,91,216,.2); }
 .job-promise-icon svg { width: 25px; }
 .job-promise p { margin: 11px 0 0; color: #52627a; line-height: 1.65; }
@@ -440,6 +441,7 @@ label input, label select, label textarea, label .password-field, label .validat
 .apply-panel h2 { font-size: 1.22rem; }
 .apply-panel p { font-size: .87rem; }
 .apply-panel small { display: block; margin-top: 14px; color: #8993a6; line-height: 1.45; }
+.apply-privacy-trigger { font-size: inherit; }
 .apply-panel.application-complete { border-color: #bfe4cf; background: linear-gradient(180deg, #fff 0%, #f1fbf5 100%); }
 .apply-panel.application-complete .apply-icon { color: #08783d; background: #dff5e8; }
 .application-checklist { display: grid; gap: 9px; margin: 20px 0; padding: 15px; border: 1px solid #e0e7f1; border-radius: 10px; background: white; text-align: left; }
@@ -552,6 +554,7 @@ td small { color: #8993a5; }
 .admin-job-fields { padding: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
 .admin-job-date-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .admin-job-fields input:disabled { color: #5d6c82; background: #eef2f7; cursor: not-allowed; opacity: 1; }
+.field-help { display: block; margin-top: 6px; color: #718096; font-size: .75rem; font-weight: 500; line-height: 1.4; }
 .field-character-count { display: block; margin-top: 6px; color: #718096; font-size: .75rem; font-weight: 500; text-align: right; }
 .rich-text-label { display: block; color: #1b2d50; font-size: .9rem; font-weight: 600; }
 .rich-text-label em { color: #b4232f; font-style: normal; }

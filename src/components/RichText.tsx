@@ -130,6 +130,63 @@ export const richTextCharacterCount = (value: string) => {
   return (parsed.body.textContent ?? '').trim().length
 }
 
+const htmlWithinTextLimit = (value: string, textLimit: number) => {
+  const parsed = new DOMParser().parseFromString(value, 'text/html')
+  const output = parsed.createElement('div')
+  let remaining = textLimit
+
+  const cloneWithinLimit = (node: Node): Node | null => {
+    if (node.nodeType === 3) {
+      if (remaining <= 0) return null
+      const text = node.textContent ?? ''
+      const accepted = text.slice(0, remaining)
+      remaining -= accepted.length
+      return accepted ? parsed.createTextNode(accepted) : null
+    }
+
+    if (node.nodeType !== 1 || remaining <= 0) return null
+    const source = node as HTMLElement
+    if (source.tagName.toLowerCase() === 'br') return source.cloneNode(false)
+
+    const clone = source.cloneNode(false) as HTMLElement
+    Array.from(source.childNodes).forEach((child) => {
+      const accepted = cloneWithinLimit(child)
+      if (accepted) clone.appendChild(accepted)
+    })
+    return clone.childNodes.length ? clone : null
+  }
+
+  Array.from(parsed.body.childNodes).forEach((node) => {
+    const accepted = cloneWithinLimit(node)
+    if (accepted) output.appendChild(accepted)
+  })
+  return output.innerHTML
+}
+
+const truncateRichText = (value: string, maxLength: number) => {
+  const sanitized = sanitizeRichText(value)
+  if (sanitized.length <= maxLength) return sanitized
+
+  const parsed = new DOMParser().parseFromString(sanitized, 'text/html')
+  const visibleLength = (parsed.body.textContent ?? '').length
+  let minimum = 0
+  let maximum = visibleLength
+  let accepted = ''
+
+  while (minimum <= maximum) {
+    const midpoint = Math.floor((minimum + maximum) / 2)
+    const candidate = htmlWithinTextLimit(sanitized, midpoint)
+    if (candidate.length <= maxLength) {
+      accepted = candidate
+      minimum = midpoint + 1
+    } else {
+      maximum = midpoint - 1
+    }
+  }
+
+  return accepted
+}
+
 const placeCaretAtEnd = (element: HTMLElement) => {
   const selection = window.getSelection()
   if (!selection) return
@@ -163,8 +220,9 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const lastAcceptedValue = useRef('')
+  const pasteInProgress = useRef(false)
   const labelId = useId()
-  const [characterCount, setCharacterCount] = useState(() => richTextCharacterCount(value))
+  const [characterCount, setCharacterCount] = useState(() => normalizeRichText(value, legacyList).length)
   const [limitReached, setLimitReached] = useState(false)
 
   useEffect(() => {
@@ -174,19 +232,31 @@ export function RichTextEditor({
     const normalized = normalizeRichText(value, legacyList)
     if (editor.innerHTML !== normalized) editor.innerHTML = normalized
     lastAcceptedValue.current = normalized
-    setCharacterCount(richTextCharacterCount(normalized))
-    setLimitReached(false)
-  }, [legacyList, value])
+    setCharacterCount(normalized.length)
+    setLimitReached(normalized.length > maxLength)
+  }, [legacyList, maxLength, value])
 
-  const emitValue = () => {
+  const emitValue = (truncateOverflow = false) => {
     const editor = editorRef.current
     if (!editor) return
 
     const sanitized = sanitizeRichText(editor.innerHTML)
-    const nextValue = richTextCharacterCount(sanitized) === 0 ? '' : sanitized
-    const nextCount = richTextCharacterCount(nextValue)
+    let nextValue = richTextCharacterCount(sanitized) === 0 ? '' : sanitized
+    let nextCount = nextValue.length
 
-    if (nextCount > maxLength) {
+    if (truncateOverflow && nextCount > maxLength) {
+      nextValue = truncateRichText(nextValue, maxLength)
+      nextCount = nextValue.length
+      editor.innerHTML = nextValue
+      placeCaretAtEnd(editor)
+      lastAcceptedValue.current = nextValue
+      setCharacterCount(nextCount)
+      setLimitReached(true)
+      onChange(nextValue)
+      return
+    }
+
+    if (nextCount > maxLength && nextCount >= lastAcceptedValue.current.length) {
       editor.innerHTML = lastAcceptedValue.current
       placeCaretAtEnd(editor)
       setLimitReached(true)
@@ -199,7 +269,7 @@ export function RichTextEditor({
     }
     lastAcceptedValue.current = nextValue
     setCharacterCount(nextCount)
-    setLimitReached(false)
+    setLimitReached(nextCount > maxLength)
     onChange(nextValue)
   }
 
@@ -219,13 +289,18 @@ export function RichTextEditor({
 
   const pasteContent = (event: React.ClipboardEvent<HTMLDivElement>) => {
     event.preventDefault()
-    const html = event.clipboardData.getData('text/html')
-    if (html) {
-      document.execCommand('insertHTML', false, sanitizeRichText(html))
-    } else {
-      document.execCommand('insertText', false, event.clipboardData.getData('text/plain'))
+    pasteInProgress.current = true
+    try {
+      const html = event.clipboardData.getData('text/html')
+      if (html) {
+        document.execCommand('insertHTML', false, sanitizeRichText(html))
+      } else {
+        document.execCommand('insertText', false, event.clipboardData.getData('text/plain'))
+      }
+      emitValue(true)
+    } finally {
+      pasteInProgress.current = false
     }
-    emitValue()
   }
 
   const controls = [
@@ -256,12 +331,12 @@ export function RichTextEditor({
           aria-multiline="true"
           aria-required={required}
           data-placeholder={placeholder}
-          onBlur={emitValue}
-          onInput={emitValue}
+          onBlur={() => emitValue()}
+          onInput={() => { if (!pasteInProgress.current) emitValue() }}
           onPaste={pasteContent}
         />
       </div>
-      <small className={`field-character-count ${limitReached ? 'character-count-limit' : ''}`}>{characterCount.toLocaleString()} / {maxLength.toLocaleString()} characters</small>
+      <small className={`field-character-count ${limitReached ? 'character-count-limit' : ''}`}>{characterCount.toLocaleString()} / {maxLength.toLocaleString()} characters, including formatting{limitReached ? ' — maximum reached' : ''}</small>
     </div>
   )
 }
