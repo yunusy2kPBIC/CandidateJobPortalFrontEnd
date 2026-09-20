@@ -72,7 +72,7 @@ export default function LoginPage() {
             </div>
             <button className="button button-primary button-wide" disabled={submitting}>{submitting ? <span className="button-loading"><span className="loader loader-small" />Signing in</span> : 'Sign In'}</button>
           </form>
-          <div className="auth-divider"><span>New to PBICareerPosting?</span></div>
+          <div className="auth-divider"><span>New to PBIC Carrier Posting?</span></div>
           <Link className="button button-secondary button-wide" to="/register">Create Account</Link>
           <p className="demo-note">Demo access: <strong>john.doe@example.com</strong> / <strong>Candidate@123</strong></p>
         </div>

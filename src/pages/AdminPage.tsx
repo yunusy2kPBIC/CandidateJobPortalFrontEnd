@@ -531,10 +531,10 @@ export default function AdminPage() {
   }
 
   const stats = [
-    { label: 'Candidates', value: summary?.candidates ?? '—', icon: UsersRound, tone: 'blue' },
-    { label: 'Applications', value: summary?.applications ?? '—', icon: ClipboardList, tone: 'violet' },
-    { label: 'Open jobs', value: summary?.open_jobs ?? '—', icon: BriefcaseBusiness, tone: 'green' },
-    { label: 'Administrators', value: summary?.admins ?? '—', icon: ShieldCheck, tone: 'amber' },
+    { label: 'Candidates', value: summary?.candidates ?? '—', detail: 'Applied', icon: UsersRound, tone: 'blue' },
+    { label: 'Applications', value: summary?.applications ?? '—', detail: 'Received from candidates', icon: ClipboardList, tone: 'violet' },
+    { label: 'Open jobs', value: summary?.open_jobs ?? '—', detail: 'Available', icon: BriefcaseBusiness, tone: 'green' },
+    { label: 'Administrators', value: summary?.admins ?? '—', detail: 'Assigned', icon: ShieldCheck, tone: 'amber' },
   ]
   const todayDate = dateInputValue(new Date())
   const originalPostingDate = editingJob?.posted_at.slice(0, 10)
@@ -551,6 +551,11 @@ export default function AdminPage() {
     ? [requestForm.nationality, ...jobOptions.nationalities]
     : jobOptions.nationalities
   const iqamaProfessionRequired = !requestForm.iqama_number.startsWith('1')
+  const hiredCandidateIds = new Set(applications
+    .filter((application) => application.status === 'Hired')
+    .map((application) => application.candidate.id))
+  const applicationLockedByHire = (application: AdminApplication) =>
+    application.status !== 'Hired' && hiredCandidateIds.has(application.candidate.id)
 
   return (
     <div className="page-container admin-page">
@@ -563,7 +568,7 @@ export default function AdminPage() {
       {notice && <Alert type="success" message={notice} />}
 
       <section className="stats-grid admin-stats-grid">
-        {stats.map(({ label, value, icon: Icon, tone }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong>{value}</strong><span>SQL records</span></div></article>)}
+        {stats.map(({ label, value, detail, icon: Icon, tone }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong>{value}</strong><span>{detail}</span></div></article>)}
       </section>
 
       <div className="admin-tabs" role="tablist" aria-label="Administration sections">
@@ -578,8 +583,8 @@ export default function AdminPage() {
       {loading ? <div className="page-loader compact"><span className="loader" /></div> : (
         <>
           {activeTab === 'applications' && <section className="panel admin-table-panel">
-            <div className="panel-heading"><div><h2>Candidate applications</h2><p>Changing a status updates PBICareerPosting and creates a notification.</p></div></div>
-            {applications.length ? <div className="table-wrap"><table><thead><tr><th>Application</th><th>Candidate</th><th>CV</th><th>Job</th><th>Applied</th><th>Status</th></tr></thead><tbody>{applications.map((application) => <tr key={application.id}><td><strong>{application.application_code}</strong></td><td><strong>{application.candidate.first_name} {application.candidate.last_name}</strong><small>{application.candidate.email}</small></td><td>{application.candidate.resume_url ? <button className="text-button" disabled={saving === `resume-${application.candidate.id}`} onClick={() => void viewCandidateCv(application.candidate)}><FileText size={14} />{saving === `resume-${application.candidate.id}` ? 'Opening...' : 'View CV'}</button> : <small>{application.candidate.resume_name ? 'CV unavailable' : 'Not uploaded'}</small>}</td><td><strong>{application.job.title}</strong><small>{application.job.city}, {application.job.country}</small></td><td>{new Date(application.applied_at).toLocaleDateString()}</td><td><select className="admin-status-select" value={application.status} disabled={saving === `application-${application.id}`} onChange={(event) => void updateApplicationStatus(application, event.target.value as AdminApplication['status'])}>{applicationStatuses.map((status) => <option key={status}>{status}</option>)}</select></td></tr>)}</tbody></table></div> : <EmptyState title="No applications" description="Candidate applications will appear here after jobs are published." />}
+            <div className="panel-heading"><div><h2>Candidate applications</h2><p className="admin-status-instruction">Update the status as required</p></div></div>
+            {applications.length ? <div className="table-wrap"><table><thead><tr><th>Application</th><th>Candidate</th><th>CV</th><th>Job</th><th>Applied</th><th>Status</th></tr></thead><tbody>{applications.map((application) => { const lockedByHire = applicationLockedByHire(application); return <tr className={lockedByHire ? 'application-row-disabled' : undefined} key={application.id}><td><strong>{application.application_code}</strong></td><td><strong>{application.candidate.first_name} {application.candidate.last_name}</strong><small>{application.candidate.email}</small></td><td>{application.candidate.resume_url ? <button className="text-button" disabled={saving === `resume-${application.candidate.id}`} onClick={() => void viewCandidateCv(application.candidate)}><FileText size={14} />{saving === `resume-${application.candidate.id}` ? 'Opening...' : 'View CV'}</button> : <small>{application.candidate.resume_name ? 'CV unavailable' : 'Not uploaded'}</small>}</td><td><strong>{application.job.title}</strong><small>{application.job.city}, {application.job.country}</small></td><td>{new Date(application.applied_at).toLocaleDateString()}</td><td><div className="application-status-control"><select className="admin-status-select" value={application.status} disabled={lockedByHire || saving === `application-${application.id}`} title={lockedByHire ? 'Disabled because this candidate has been hired for another job' : undefined} onChange={(event) => void updateApplicationStatus(application, event.target.value as AdminApplication['status'])}>{applicationStatuses.map((status) => <option key={status}>{status}</option>)}</select>{lockedByHire && <small>Disabled — candidate hired</small>}</div></td></tr> })}</tbody></table></div> : <EmptyState title="No applications" description="Candidate applications will appear here after jobs are published." />}
           </section>}
 
           {activeTab === 'jobs' && <>

@@ -8,7 +8,7 @@ export default function PublicLayout({ children, action }: { children: ReactNode
       <header className="public-header">
         <Brand light />
         <div className="public-header-action">
-          <span>{action === 'signin' ? 'Already have an account?' : 'New to PBICareerPosting?'}</span>
+          <span>{action === 'signin' ? 'Already have an account?' : 'New to PBIC Carrier Posting?'}</span>
           <Link className="button button-ghost-light button-small" to={action === 'signin' ? '/login' : '/register'}>
             {action === 'signin' ? 'Sign In' : 'Create account'}
           </Link>
@@ -16,7 +16,7 @@ export default function PublicLayout({ children, action }: { children: ReactNode
       </header>
       <main className="public-main">{children}</main>
       <footer className="public-footer">
-        <span>© 2026 PBICareerPosting. All rights reserved.</span>
+        <span>© 2026 PBIC Carrier Posting. All rights reserved.</span>
         <nav aria-label="Legal links">
           <Link to="/privacy">Privacy Policy</Link>
           <span>•</span>

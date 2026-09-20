@@ -16,10 +16,9 @@ export default function JobCard({ job, applied = false }: { job: Job; applied?: 
           <span><MapPin size={15} />{job.city === 'Remote' ? 'Remote' : `${job.city}, ${job.country}`}</span>
           <span><Clock3 size={15} />{job.employment_type}</span>
         </div>
-        <p>{job.summary}</p>
       </div>
       <div className="job-card-action">
-        <small>Posted {posted}</small>
+        <small>Posted on {posted}</small>
         <Link className="button button-primary button-small" to={`/jobs/${job.id}`}>View Details</Link>
       </div>
     </article>

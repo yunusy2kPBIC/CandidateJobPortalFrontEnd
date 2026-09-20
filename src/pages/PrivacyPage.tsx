@@ -23,7 +23,7 @@ export default function PrivacyPage() {
           <div>
             <div className="eyebrow"><FileCheck2 size={16} />Candidate information</div>
             <h1>{notice?.title ?? 'Candidate Portal Privacy Notice'}</h1>
-            <p>Review how information submitted through PBICareerPosting is collected, used, protected, and recorded.</p>
+            <p>Review how information submitted through PBIC Carrier Posting is collected, used, protected, and recorded.</p>
           </div>
         </header>
 

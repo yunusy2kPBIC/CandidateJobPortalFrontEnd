@@ -113,7 +113,7 @@ export default function JobDetailsPage() {
     <div className="page-container details-page">
       <Link className="back-link" to="/jobs"><ArrowLeft size={17} />Back to jobs</Link>
       <section className="details-hero panel">
-        <div><div className="job-badges"><span className="status-pill status-open">Open</span><span>{job.career_level}</span></div><h1>{job.title}</h1><div className="job-meta detail-meta"><span><Building2 />{job.division}</span><span><MapPin />{job.city}, {job.country}</span><span><Clock3 />{job.employment_type}</span><span><CalendarDays />Posted {new Date(job.posted_at).toLocaleDateString()}</span></div></div>
+        <div><div className="job-badges"><span className="status-pill status-open">Open</span><span>{job.career_level}</span></div><h1>{job.title}</h1><div className="job-meta detail-meta"><span><Building2 />{job.division}</span><span><MapPin />{job.city}, {job.country}</span><span><Clock3 />{job.employment_type}</span><span><CalendarDays />Posted on {new Date(job.posted_at).toLocaleDateString()}</span></div></div>
         <div className="job-share-actions">
           <button className="icon-button share-button" onClick={() => void copyLink()} title="Copy job link" aria-label="Copy job link"><Copy size={18} /></button>
         </div>

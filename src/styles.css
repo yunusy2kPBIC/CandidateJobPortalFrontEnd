@@ -372,7 +372,6 @@ label input, label select, label textarea, label .password-field, label .validat
 .status-applied { color: #6b3fa0; background: #eee4fb; }
 .job-meta { display: flex; flex-wrap: wrap; gap: 15px; margin: 11px 0 10px; color: #354761; font-size: .78rem; }
 .job-meta span { display: inline-flex; align-items: center; gap: 6px; }
-.job-card p { margin: 0; font-size: .82rem; color: #526079; }
 .job-card-action { min-width: 130px; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; }
 .job-card-action small { color: #7e8b9f; white-space: nowrap; font-size: .72rem; }
 .career-hero { height: 320px; padding: 30px; display: flex; align-items: end; border-radius: 13px; color: white; background-image: linear-gradient(90deg, rgba(1,37,81,.92), rgba(3,42,88,.15)), url('/candidate-hero.png'), linear-gradient(145deg, #0a5f89, #07265b); background-size: cover; background-position: center; box-shadow: var(--shadow-soft); overflow: hidden; }
@@ -578,6 +577,10 @@ td small { color: #8993a5; }
 .admin-job-wide { grid-column: 1 / -1; }
 .admin-job-fields .checkbox-label { align-self: center; }
 .admin-form-actions { padding: 0 24px 24px; display: flex; justify-content: flex-end; gap: 10px; }
+.admin-status-instruction { color: #b4232f !important; font-weight: 600; }
+.application-row-disabled { background: #f8f9fb; color: #7d8798; }
+.application-status-control { display: grid; gap: 4px; }
+.application-status-control small { color: #b4232f; font-weight: 600; white-space: nowrap; }
 .recruitment-form-actions { flex-wrap: wrap; gap: 10px; }
 .recruitment-setup-state { padding: 24px; }
 .recruitment-setup-state .alert { margin-bottom: 14px; }
