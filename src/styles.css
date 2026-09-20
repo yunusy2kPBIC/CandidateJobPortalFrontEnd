@@ -577,7 +577,7 @@ td small { color: #8993a5; }
 .cooperative-training-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .admin-job-wide { grid-column: 1 / -1; }
 .admin-job-fields .checkbox-label { align-self: center; }
-.admin-form-actions { padding: 0 24px 24px; display: flex; justify-content: flex-end; }
+.admin-form-actions { padding: 0 24px 24px; display: flex; justify-content: flex-end; gap: 10px; }
 .recruitment-form-actions { flex-wrap: wrap; gap: 10px; }
 .recruitment-setup-state { padding: 24px; }
 .recruitment-setup-state .alert { margin-bottom: 14px; }
