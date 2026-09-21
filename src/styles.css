@@ -318,7 +318,8 @@ label input, label select, label textarea, label .password-field, label .validat
 .tone-amber { color: #d78013 !important; background: #fff2df !important; }
 .stat-card div { display: flex; flex-direction: column; }
 .stat-card small { color: #66748a; }
-.stat-card strong { color: #0c2249; font-family: 'Manrope', sans-serif; font-size: 1.65rem; line-height: 1.25; margin: 4px 0 1px; }
+/* .stat-card strong { color: #0c2249; font-family: 'Manrope', sans-serif; font-size: 1.65rem; line-height: 1.25; margin: 4px 0 1px; } */
+.stat-card strong { color: #228B22; font-family: 'Manrope', sans-serif; font-size: 1.65rem; line-height: 1.25; margin: 4px 0 1px; }
 .stat-card div span { color: #8a95a7; font-size: .75rem; }
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .7fr); gap: 18px; margin-top: 18px; }
 .activity-list { padding: 4px 25px 11px; }
