@@ -2,11 +2,13 @@ import { BarChart3, BriefcaseBusiness, Building2, CheckCircle2, Globe2, HeartPul
 import { FormEvent, useEffect, useState } from 'react'
 import JobCard from '../components/JobCard'
 import { EmptyState } from '../components/Feedback'
+import { AdminTablePagination, paginateRows } from '../components/AdminTableControls'
 import { api, type JobList, type LookupOptions } from '../services/api'
 
 const emptyData: JobList = { items: [], total: 0, filters: { countries: [], cities: [], divisions: [], job_functions: [], career_levels: [] } }
 const emptyLookups: LookupOptions = { countries: [], residence_countries: [], nationalities: [], divisions: [], job_functions: [], career_levels: [] }
 const initialFilters = { keywords: '', country: '', city: '', division: '', job_function: '', career_level: '', sort: 'recent' }
+const availableJobsPageSize = 10
 
 export default function JobsPage() {
   const [filters, setFilters] = useState(initialFilters)
@@ -15,8 +17,10 @@ export default function JobsPage() {
   const [appliedJobIds, setAppliedJobIds] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
 
   const load = async (values = filters) => {
+    setPage(1)
     setLoading(true)
     setError('')
     const params = new URLSearchParams()
@@ -54,6 +58,7 @@ export default function JobsPage() {
   const divisionOptions = lookups.divisions.length ? lookups.divisions : data.filters.divisions
   const jobFunctionOptions = lookups.job_functions.length ? lookups.job_functions : data.filters.job_functions
   const careerLevelOptions = lookups.career_levels.length ? lookups.career_levels : data.filters.career_levels
+  const jobPage = paginateRows(data.items, page, availableJobsPageSize)
 
   return (
     <div className="page-container jobs-page">
@@ -73,7 +78,7 @@ export default function JobsPage() {
           </form>
           <div className="results-heading"><div><h2>Search results <span>{data.total}</span></h2><p>{filters.keywords ? `Matching “${filters.keywords}”` : 'Fresh opportunities for you'}</p></div><label>Sort by:<select value={filters.sort} onChange={(event) => { const next = { ...filters, sort: event.target.value }; setFilters(next); void load(next) }}><option value="recent">Most recent</option><option value="oldest">Oldest</option><option value="title">Job title</option></select></label></div>
           {error && <div className="alert alert-error">{error}</div>}
-          {loading ? <div className="loading-stack">{[1, 2, 3].map((item) => <div className="skeleton job-card" key={item} />)}</div> : data.items.length ? <div className="job-list">{data.items.map((job) => <JobCard key={job.id} job={job} applied={appliedJobIds.has(job.id)} />)}</div> : <EmptyState title="No matching roles" description="Try broadening your filters or clearing the search." />}
+          {loading ? <div className="loading-stack">{[1, 2, 3].map((item) => <div className="skeleton job-card" key={item} />)}</div> : data.items.length ? <><div className="job-list">{jobPage.rows.map((job) => <JobCard key={job.id} job={job} applied={appliedJobIds.has(job.id)} />)}</div><div className="jobs-pagination"><AdminTablePagination page={jobPage.page} totalPages={jobPage.totalPages} filteredCount={data.items.length} onChange={setPage} /></div></> : <EmptyState title="No matching roles" description="Try broadening your filters or clearing the search." />}
         </section>
         <aside className="jobs-aside">
           <article className="career-hero"><div><span>Careers with purpose</span><h2>Build your future with us.</h2><p>Join a team that values curiosity, collaboration and personal growth.</p></div></article>
