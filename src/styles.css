@@ -370,6 +370,8 @@ label input, label select, label textarea, label .password-field, label .validat
 .results-heading label { display: flex; align-items: center; gap: 9px; white-space: nowrap; font-weight: 500; }
 .results-heading select { width: 150px; margin: 0; height: 39px; }
 .job-list, .loading-stack { display: grid; gap: 12px; }
+.jobs-pagination { margin-top: 14px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-soft); }
+.jobs-pagination .admin-pagination { border-top: 0; background: white; }
 .job-card { padding: 20px 19px; display: flex; justify-content: space-between; gap: 22px; background: white; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 5px 17px rgba(31,57,96,.055); transition: border .18s, box-shadow .18s, transform .18s; }
 .job-card:not(.skeleton):hover { border-color: #b5cef2; box-shadow: 0 10px 24px rgba(18,60,119,.09); transform: translateY(-1px); }
 .job-card-main { min-width: 0; flex: 1; }
