@@ -12,7 +12,6 @@ import {
   ListChecks,
   Mail,
   MapPin,
-  X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
@@ -63,14 +62,9 @@ export default function JobDetailsPage() {
   useEffect(() => {
     if (!privacyOpen) return
     const previousOverflow = document.body.style.overflow
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setPrivacyOpen(false)
-    }
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', closeOnEscape)
     return () => {
       document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', closeOnEscape)
     }
   }, [privacyOpen])
 
@@ -88,6 +82,11 @@ export default function JobDetailsPage() {
     } finally {
       setApplying(false)
     }
+  }
+
+  const continueWithApplication = () => {
+    setPrivacyOpen(false)
+    void apply()
   }
 
   const copyLink = async () => {
@@ -142,16 +141,15 @@ export default function JobDetailsPage() {
           {applied
             ? <Link className="button button-secondary button-wide" to="/applications">View my applications</Link>
             : canApply
-              ? <button className="button button-primary button-wide" onClick={() => void apply()} disabled={applying}>{applying ? 'Submitting…' : 'Apply Now'}</button>
+              ? <button className="button button-primary button-wide" onClick={() => setPrivacyOpen(true)} disabled={applying || !privacyNotice}>{applying ? 'Submitting…' : privacyNotice ? 'Apply Now' : 'Loading terms…'}</button>
               : <Link className="button button-primary button-wide" to="/profile">Complete profile to apply</Link>}
-          <small>{applied ? 'We will notify you when your application status changes.' : <>By applying, you agree to our {privacyNotice ? <button type="button" className="privacy-inline-trigger apply-privacy-trigger" onClick={() => setPrivacyOpen(true)}>candidate privacy statement</button> : <Link to="/privacy">candidate privacy statement</Link>}.</>}</small>
+          <small>{applied ? 'We will notify you when your application status changes.' : <>By applying, you agree to our {privacyNotice ? <button type="button" className="privacy-inline-trigger apply-privacy-trigger" onClick={() => setPrivacyOpen(true)}>candidate privacy statement</button> : <span>candidate privacy statement</span>}.</>}</small>
         </aside>
       </div>
-      {privacyOpen && privacyNotice && <div className="privacy-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPrivacyOpen(false) }}>
+      {privacyOpen && privacyNotice && <div className="privacy-modal-backdrop" role="presentation">
         <section className="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="application-privacy-title">
           <header className="privacy-modal-heading">
             <div><span className="eyebrow"><FileCheck2 size={16} />Candidate information</span><h2 id="application-privacy-title">{privacyNotice.title}</h2></div>
-            <button type="button" className="icon-button" aria-label="Close privacy notice" onClick={() => setPrivacyOpen(false)}><X size={20} /></button>
           </header>
           <div className="privacy-modal-content">
             <div className="privacy-notice-meta">
@@ -164,8 +162,7 @@ export default function JobDetailsPage() {
             <aside className="privacy-contact"><Mail /><div><strong>Privacy questions</strong><p>Contact <a href={`mailto:${privacyNotice.contact_email}`}>{privacyNotice.contact_email}</a>.</p></div></aside>
           </div>
           <footer className="privacy-modal-actions">
-            <button type="button" className="button button-secondary" onClick={() => setPrivacyOpen(false)}>Close</button>
-            <button type="button" className="button button-primary" onClick={() => setPrivacyOpen(false)}>Continue application</button>
+            <button type="button" className="button button-primary" onClick={continueWithApplication} disabled={applying}>{applying ? 'Submitting…' : 'Continue with application'}</button>
           </footer>
         </section>
       </div>}

@@ -294,6 +294,14 @@ label input, label select, label textarea, label .password-field, label .validat
 .topbar-spacer { flex: 1; }
 .notification-button { width: 38px; height: 38px; display: grid; place-items: center; color: #425879; position: relative; }
 .notification-button span { position: absolute; right: 0; top: 0; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; color: white; background: #ef3c4d; border: 2px solid white; font-size: .62rem; }
+.notification-toast { position: fixed; z-index: 80; top: 82px; right: 24px; width: min(390px, calc(100vw - 32px)); padding: 16px; display: flex; align-items: flex-start; gap: 12px; border: 1px solid #d8e5f5; border-radius: 12px; background: white; box-shadow: 0 14px 38px rgba(17, 42, 77, .18); }
+.notification-toast-icon { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; border-radius: 50%; color: var(--blue); background: #dfedff; }
+.notification-toast-content { min-width: 0; flex: 1; display: grid; gap: 4px; }
+.notification-toast-content strong { font-size: .9rem; color: #142b4a; }
+.notification-toast-content > span { font-size: .82rem; line-height: 1.45; color: #586a82; }
+.notification-toast-content a { width: fit-content; margin-top: 3px; color: var(--blue); font-size: .8rem; font-weight: 700; text-decoration: none; }
+.notification-toast > button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 7px; color: #6f7f94; background: transparent; cursor: pointer; }
+.notification-toast > button:hover { background: #f0f4f9; }
 .user-menu { display: flex; align-items: center; gap: 10px; color: var(--ink); font-weight: 600; font-size: .87rem; }
 .avatar { display: grid; place-items: center; border-radius: 50%; text-transform: uppercase; color: var(--navy); background: linear-gradient(145deg, #dbe9fb, #f2f6fb); border: 1px solid #cad8eb; font-weight: 800; }
 .avatar-small { width: 36px; height: 36px; font-size: .77rem; }
@@ -548,6 +556,16 @@ td small { color: #8993a5; }
 .admin-tabs button.active > span { color: white; background: var(--blue); }
 .admin-table-panel { overflow: hidden; }
 .admin-table-panel .panel-heading { align-items: center; }
+.admin-table-search { padding: 0 22px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #e7ecf3; }
+.admin-table-search label { width: min(470px, 100%); position: relative; display: block; }
+.admin-table-search label > svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #708198; pointer-events: none; }
+.admin-table-search input { height: 42px; margin: 0; padding-left: 39px; background: #f9fbfe; }
+.admin-table-search > span { flex: 0 0 auto; color: #718096; font-size: .78rem; font-weight: 600; }
+.admin-pagination { min-height: 62px; padding: 10px 22px; display: flex; align-items: center; justify-content: flex-end; gap: 15px; border-top: 1px solid #e7ecf3; background: #fbfcfe; }
+.admin-pagination button { min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center; gap: 5px; color: #245487; background: white; border: 1px solid #cdd9e8; border-radius: 7px; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.admin-pagination button:hover:not(:disabled) { color: var(--blue); border-color: #8db6ec; background: #f3f8ff; }
+.admin-pagination button:disabled { color: #9ba7b7; background: #f4f6f9; cursor: not-allowed; }
+.admin-pagination > span { color: #64748a; font-size: .78rem; }
 .admin-status-select { width: 145px; height: 36px; margin: 0; padding: 0 9px; color: #173b6d; font-size: .78rem; font-weight: 700; background-color: #f4f8fe; border-color: #cad9ed; }
 .admin-job-form { margin-bottom: 18px; overflow: hidden; }
 .admin-job-form > .panel-heading { align-items: center; }
@@ -730,6 +748,11 @@ td small { color: #8993a5; }
   .admin-form-actions { padding: 0 17px 19px; }
   .admin-form-actions .button { width: 100%; }
   .admin-table-panel .panel-heading { align-items: flex-start; flex-direction: column; }
+  .admin-table-search { padding: 0 16px 16px; align-items: stretch; flex-direction: column; gap: 8px; }
+  .admin-table-search label { width: 100%; }
+  .admin-table-search > span { align-self: flex-end; }
+  .admin-pagination { padding: 12px 16px; justify-content: space-between; gap: 8px; }
+  .admin-pagination button { padding: 0 9px; }
 }
 .student-registration-check { align-items: flex-start; padding: 14px 16px; border: 1px solid #dce5f1; border-radius: 12px; background: #f7faff; }
 .student-registration-check span { display: grid; gap: 3px; }

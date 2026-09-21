@@ -14,6 +14,7 @@ import {
   type CooperativeTrainingRequest,
 } from '../services/api'
 import { Alert, EmptyState } from './Feedback'
+import { AdminTablePagination, AdminTableSearch, paginateRows } from './AdminTableControls'
 
 type Props = {
   refreshKey?: number
@@ -103,6 +104,8 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
   const [settingUp, setSettingUp] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
 
   const loadRequests = useCallback(async () => {
     setLoading(true)
@@ -231,6 +234,21 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
     }
   }
 
+  const normalizedSearch = search.trim().toLowerCase()
+  const filteredRequests = requests.filter((request) => normalizedSearch.length === 0 || [
+    request.first_name,
+    request.last_name,
+    request.id_number,
+    request.mobile_number,
+    request.email,
+    request.semester,
+    request.major,
+    request.university_college,
+    request.desired_city_for_training,
+    request.current_city_of_residency,
+  ].some((value) => String(value).toLowerCase().includes(normalizedSearch)))
+  const requestPage = paginateRows(filteredRequests, page)
+
   return <>
     {error && <Alert type="error" message={error} />}
     {notice && <Alert type="success" message={notice} />}
@@ -275,7 +293,8 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
 
     <section className="panel admin-table-panel">
       <div className="panel-heading"><div><h2>Cooperative training requests</h2><p>Applicant applied for cooperative training.</p></div>{!showForm && !error && <button className="button button-secondary button-small" onClick={openCreate}><Plus size={16} />Add request</button>}</div>
-      {error && !requests.length && !loading ? <div className="recruitment-setup-state"><p>{canManageSetup ? 'The required lists or document library may not be ready yet.' : 'The cooperative training module is unavailable. Ask an Administrator to verify the SharePoint setup.'}</p>{canManageSetup && <button className="button button-primary button-small" disabled={settingUp} onClick={() => void setupModule()}>{settingUp ? 'Setting up...' : 'Set up module'}</button>}</div> : loading ? <div className="page-loader compact"><span className="loader" /></div> : requests.length ? <div className="table-wrap"><table><thead><tr><th>Applicant</th><th>Contact / EMAIL ID</th><th>SEMESTER / DURATION</th><th>Education / UNIVERSITY</th><th>Location</th><th>Documents</th><th>Actions</th></tr></thead><tbody>{requests.map((request) => <tr key={request.id}><td><strong>{request.first_name} {request.last_name}</strong><small>{request.id_number} · {request.gender}</small></td><td><strong>{request.mobile_number}</strong><small>{request.email}</small></td><td><strong>{request.semester}</strong><small>{request.training_duration} months · {new Date(`${request.training_starting_date}T00:00:00`).toLocaleDateString()}</small></td><td><strong>{request.major}</strong><small>{request.university_college} · GPA {request.cumulative_gpa}/{request.gpa_scale}</small></td><td><strong>{request.desired_city_for_training}</strong><small>Lives in {request.current_city_of_residency}</small></td><td><div className="training-document-links">{request.transcript_url ? <a href={request.transcript_url} target="_blank" rel="noreferrer"><FileText size={14} />Transcript<ExternalLink size={12} /></a> : <small>No transcript</small>}{request.university_request_url ? <a href={request.university_request_url} target="_blank" rel="noreferrer"><FileText size={14} />University request<ExternalLink size={12} /></a> : <small>No university request</small>}</div></td><td><div className="admin-row-actions"><button className="text-button" disabled={saving} onClick={() => openEdit(request)}><Pencil size={14} />Edit</button><button className="text-button text-button-danger" disabled={saving} onClick={() => void deleteRequest(request)}><Trash2 size={14} />Delete</button></div></td></tr>)}</tbody></table></div> : <EmptyState title="No cooperative training requests" description="Add the first cooperative training request and its supporting documents." />}
+      {!loading && !(error && !requests.length) && <AdminTableSearch value={search} onChange={(value) => { setSearch(value); setPage(1) }} placeholder="Search applicant, ID, university, major or location" filteredCount={filteredRequests.length} totalCount={requests.length} />}
+      {error && !requests.length && !loading ? <div className="recruitment-setup-state"><p>{canManageSetup ? 'The required lists or document library may not be ready yet.' : 'The cooperative training module is unavailable. Ask an Administrator to verify the SharePoint setup.'}</p>{canManageSetup && <button className="button button-primary button-small" disabled={settingUp} onClick={() => void setupModule()}>{settingUp ? 'Setting up...' : 'Set up module'}</button>}</div> : loading ? <div className="page-loader compact"><span className="loader" /></div> : filteredRequests.length ? <><div className="table-wrap"><table><thead><tr><th>Applicant</th><th>Contact / EMAIL ID</th><th>SEMESTER / DURATION</th><th>Education / UNIVERSITY</th><th>Location</th><th>Documents</th><th>Actions</th></tr></thead><tbody>{requestPage.rows.map((request) => <tr key={request.id}><td><strong>{request.first_name} {request.last_name}</strong><small>{request.id_number} · {request.gender}</small></td><td><strong>{request.mobile_number}</strong><small>{request.email}</small></td><td><strong>{request.semester}</strong><small>{request.training_duration} months · {new Date(`${request.training_starting_date}T00:00:00`).toLocaleDateString()}</small></td><td><strong>{request.major}</strong><small>{request.university_college} · GPA {request.cumulative_gpa}/{request.gpa_scale}</small></td><td><strong>{request.desired_city_for_training}</strong><small>Lives in {request.current_city_of_residency}</small></td><td><div className="training-document-links">{request.transcript_url ? <a href={request.transcript_url} target="_blank" rel="noreferrer"><FileText size={14} />Transcript<ExternalLink size={12} /></a> : <small>No transcript</small>}{request.university_request_url ? <a href={request.university_request_url} target="_blank" rel="noreferrer"><FileText size={14} />University request<ExternalLink size={12} /></a> : <small>No university request</small>}</div></td><td><div className="admin-row-actions"><button className="text-button" disabled={saving} onClick={() => openEdit(request)}><Pencil size={14} />Edit</button><button className="text-button text-button-danger" disabled={saving} onClick={() => void deleteRequest(request)}><Trash2 size={14} />Delete</button></div></td></tr>)}</tbody></table></div><AdminTablePagination page={requestPage.page} totalPages={requestPage.totalPages} filteredCount={filteredRequests.length} onChange={setPage} /></> : <EmptyState title={requests.length ? 'No matching cooperative training requests' : 'No cooperative training requests'} description={requests.length ? 'Try a different search term.' : 'Add the first cooperative training request and its supporting documents.'} />}
     </section>
   </>
 }
