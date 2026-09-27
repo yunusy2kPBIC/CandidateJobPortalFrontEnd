@@ -20,6 +20,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router'
 import { portalRoles, recruitmentAdministratorRoles, roleLabel, type UserRole } from '../auth/roles'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../services/api'
+import type { Notification } from '../services/api'
 import Brand from './Brand'
 
 type NavigationItem = {
@@ -57,6 +58,7 @@ const navigation: NavigationItem[] = [
 export default function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [notificationPreview, setNotificationPreview] = useState<Notification | null>(null)
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const initials = `${user?.first_name[0] ?? ''}${user?.last_name[0] ?? ''}`.toUpperCase()
@@ -64,19 +66,44 @@ export default function AppShell() {
   useEffect(() => {
     if (user?.role === portalRoles.student) {
       setUnreadNotifications(0)
+      setNotificationPreview(null)
       return
     }
     let active = true
-    const refreshUnreadCount = () => {
-      api.unreadNotificationCount()
-        .then(({ unread }) => { if (active) setUnreadNotifications(unread) })
-        .catch(() => { if (active) setUnreadNotifications(0) })
+    let lastPreviewedNotificationId: number | null = null
+    const refreshNotifications = async (showPreview: boolean) => {
+      try {
+        const { unread } = await api.unreadNotificationCount()
+        if (!active) return
+        setUnreadNotifications(unread)
+        if (showPreview && user?.role === portalRoles.candidate && unread > 0) {
+          try {
+            const notifications = await api.notifications()
+            if (!active) return
+            const latestUnread = notifications.find((notification) => !notification.is_read)
+            if (latestUnread && latestUnread.id !== lastPreviewedNotificationId) {
+              lastPreviewedNotificationId = latestUnread.id
+              setNotificationPreview(latestUnread)
+            }
+          } catch {
+            // Preserve the unread badge when only the notification preview request fails.
+          }
+        }
+      } catch {
+        if (active) setUnreadNotifications(0)
+      }
     }
-    refreshUnreadCount()
-    window.addEventListener('notifications-updated', refreshUnreadCount)
+    const refreshCountOnly = () => { void refreshNotifications(false) }
+    const refreshOnFocus = () => { void refreshNotifications(true) }
+    void refreshNotifications(true)
+    const interval = window.setInterval(refreshOnFocus, 30_000)
+    window.addEventListener('focus', refreshOnFocus)
+    window.addEventListener('notifications-updated', refreshCountOnly)
     return () => {
       active = false
-      window.removeEventListener('notifications-updated', refreshUnreadCount)
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refreshOnFocus)
+      window.removeEventListener('notifications-updated', refreshCountOnly)
     }
   }, [user?.id, user?.role])
 
@@ -122,6 +149,17 @@ export default function AppShell() {
             <ChevronDown size={15} />
           </NavLink>
         </header>
+        {notificationPreview && (
+          <aside className="notification-toast" role="status" aria-live="polite">
+            <span className="notification-toast-icon"><Bell size={19} /></span>
+            <span className="notification-toast-content">
+              <strong>{notificationPreview.title}</strong>
+              <span>{notificationPreview.message}</span>
+              <NavLink to="/notifications" onClick={() => setNotificationPreview(null)}>View notifications</NavLink>
+            </span>
+            <button type="button" onClick={() => setNotificationPreview(null)} aria-label="Dismiss notification"><X size={17} /></button>
+          </aside>
+        )}
         <main className="app-content"><Outlet /></main>
       </div>
     </div>

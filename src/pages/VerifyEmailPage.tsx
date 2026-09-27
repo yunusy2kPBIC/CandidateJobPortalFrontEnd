@@ -100,9 +100,9 @@ export default function VerifyEmailPage() {
         {notice && <Alert type="success" message={notice} />}
 
         {devCode && <div className="dev-verification-code">
-          <span>Development email code</span>
+          <span>Temporary verification code</span>
           <strong>{devCode}</strong>
-          <small>Sender: dev-no-reply@candidateportal.local</small>
+          <small>Email delivery is currently disabled</small>
         </div>}
 
         <form className="auth-form verify-email-form" onSubmit={submit}>
@@ -133,7 +133,7 @@ export default function VerifyEmailPage() {
             <RotateCcw size={15} />{resending ? 'Generating code' : resendIn > 0 ? `Resend in ${countdown(resendIn)}` : 'Generate a new code'}
           </button>
         </div>
-        <p className="development-email-note">Development mode does not contact an external mailbox. The code is shown here and written to the API log.</p>
+        <p className="development-email-note">When email delivery is disabled, the verification code is shown here instead.</p>
       </section>
     </PublicLayout>
   )

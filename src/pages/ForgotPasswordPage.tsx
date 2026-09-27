@@ -122,9 +122,9 @@ export default function ForgotPasswordPage() {
           <button className="button button-primary button-wide" disabled={submitting}>{submitting ? 'Generating code…' : 'Continue'}</button>
         </form> : <>
           {pending?.dev_reset_code && <div className="dev-verification-code">
-            <span>Development reset code</span>
+            <span>Temporary reset code</span>
             <strong>{pending.dev_reset_code}</strong>
-            <small>Sender: dev-no-reply@candidateportal.local</small>
+            <small>Email delivery is currently disabled</small>
           </div>}
           <form className="auth-form verify-email-form" onSubmit={resetPassword}>
             <label>Reset code
@@ -149,7 +149,7 @@ export default function ForgotPasswordPage() {
             <button type="button" className="text-button" onClick={() => { setStep('request'); setPending(null); setNotice(''); setError('') }}>Use a different email</button>
             <button type="button" className="text-button" onClick={() => void requestCode()} disabled={submitting || resendIn > 0}><RotateCcw size={15} />{resendIn > 0 ? `Resend in ${countdown(resendIn)}` : 'Generate a new code'}</button>
           </div>
-          <p className="development-email-note">Development mode shows the reset code here and writes both reset messages to the API log.</p>
+          <p className="development-email-note">When email delivery is disabled, the reset code is shown here instead.</p>
         </>}
       </section>
     </PublicLayout>

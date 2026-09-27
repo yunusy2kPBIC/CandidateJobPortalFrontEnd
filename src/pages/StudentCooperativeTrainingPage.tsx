@@ -5,8 +5,10 @@ import {
   FileCheck2,
   FileText,
   GraduationCap,
+  Pencil,
   Save,
   ShieldCheck,
+  X,
 } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 import { Alert } from '../components/Feedback'
@@ -70,6 +72,7 @@ export default function StudentCooperativeTrainingPage() {
   const { user } = useAuth()
   const [form, setForm] = useState<CooperativeTrainingPayload>(() => createInitialForm(user))
   const [request, setRequest] = useState<CooperativeTrainingRequest | null>(null)
+  const [editing, setEditing] = useState(false)
   const [transcript, setTranscript] = useState<File | null>(null)
   const [universityRequest, setUniversityRequest] = useState<File | null>(null)
   const [eligibilityConfirmed, setEligibilityConfirmed] = useState(false)
@@ -109,7 +112,7 @@ export default function StudentCooperativeTrainingPage() {
       setError('Confirm that you meet the cooperative training eligibility requirements.')
       return
     }
-    if (!transcript || !universityRequest) {
+    if (!editing && (!transcript || !universityRequest)) {
       setError('Upload both your transcript and the official university training request.')
       return
     }
@@ -119,15 +122,64 @@ export default function StudentCooperativeTrainingPage() {
     }
     setSubmitting(true)
     try {
-      const created = await api.submitStudentCooperativeTraining(form, transcript, universityRequest)
-      setRequest(created)
-      setNotice('Your cooperative training request was submitted successfully.')
+      const saved = editing
+        ? await api.updateStudentCooperativeTraining(form, transcript, universityRequest)
+        : await api.submitStudentCooperativeTraining(form, transcript!, universityRequest!)
+      setRequest(saved)
+      setEditing(false)
+      setTranscript(null)
+      setUniversityRequest(null)
+      setNotice(editing
+        ? 'Your cooperative training request was updated successfully.'
+        : 'Your cooperative training request was submitted successfully.')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to submit your cooperative training request')
+      setError(caught instanceof Error ? caught.message : `Unable to ${editing ? 'update' : 'submit'} your cooperative training request`)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const beginEditing = () => {
+    if (!request) return
+    setForm({
+      first_name: user?.first_name ?? request.first_name,
+      last_name: user?.last_name ?? request.last_name,
+      id_number: request.id_number,
+      mobile_number: request.mobile_number,
+      email: user?.email ?? request.email,
+      gender: request.gender,
+      training_duration: request.training_duration,
+      semester: request.semester,
+      training_starting_date: request.training_starting_date,
+      training_supervisor_name: request.training_supervisor_name,
+      training_supervisor_number: request.training_supervisor_number,
+      training_supervisor_email: request.training_supervisor_email,
+      university_college: request.university_college,
+      qualification: request.qualification,
+      major: request.major,
+      gpa_scale: request.gpa_scale,
+      cumulative_gpa: request.cumulative_gpa,
+      english_level: request.english_level,
+      desired_city_for_training: request.desired_city_for_training,
+      current_city_of_residency: request.current_city_of_residency,
+      disability: request.disability,
+      declaration_accepted: request.declaration_accepted,
+    })
+    setEligibilityConfirmed(true)
+    setTranscript(null)
+    setUniversityRequest(null)
+    setError(null)
+    setNotice(null)
+    setEditing(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const cancelEditing = () => {
+    setEditing(false)
+    setTranscript(null)
+    setUniversityRequest(null)
+    setError(null)
   }
 
   if (loading) return <div className="page-loader"><span className="loader" /></div>
@@ -141,7 +193,7 @@ export default function StudentCooperativeTrainingPage() {
       {error && <Alert type="error" message={error} />}
       {notice && <Alert type="success" message={notice} />}
 
-      {request ? <SubmittedRequest request={request} /> : <>
+      {request && !editing ? <SubmittedRequest request={request} onEdit={beginEditing} /> : <>
         <section className="panel student-training-requirements">
           <div className="form-section-heading"><span><ShieldCheck /></span><div><h2>Before you apply</h2><p>Confirm that the program is suitable for your academic requirement.</p></div></div>
           <div className="student-requirement-grid">
@@ -153,7 +205,7 @@ export default function StudentCooperativeTrainingPage() {
         </section>
 
         <form className="panel admin-job-form cooperative-training-form student-training-form" onSubmit={submit}>
-          <div className="panel-heading"><div><h2>Student application</h2><p>Your account name and email are attached automatically to this request.</p></div></div>
+          <div className="panel-heading"><div><h2>{editing ? 'Edit student application' : 'Student application'}</h2><p>Your account name and email are attached automatically to this request.</p></div></div>
           <div className="admin-job-fields cooperative-training-fields">
             <label>First name<input required readOnly value={form.first_name} /></label>
             <label>Last name<input required readOnly value={form.last_name} /></label>
@@ -176,25 +228,28 @@ export default function StudentCooperativeTrainingPage() {
             <label>Desired training city<select required value={form.desired_city_for_training} onChange={(event) => setForm({ ...form, desired_city_for_training: event.target.value })}><option value="" disabled>Select city</option>{cityOptions.map((value) => <option key={value}>{value}</option>)}</select></label>
             <label>Current city<select required value={form.current_city_of_residency} onChange={(event) => setForm({ ...form, current_city_of_residency: event.target.value })}><option value="" disabled>Select city</option>{cityOptions.map((value) => <option key={value}>{value}</option>)}</select></label>
             <label>Disability?<select value={form.disability ? 'yes' : 'no'} onChange={(event) => setForm({ ...form, disability: event.target.value === 'yes' })}><option value="no">No</option><option value="yes">Yes</option></select></label>
-            <label className="training-document-field">University / college transcript<input required type="file" accept=".pdf,.doc,.docx" onChange={(event) => setTranscript(event.target.files?.[0] ?? null)} /><small>PDF, DOC, or DOCX; maximum 10 MB.</small></label>
-            <label className="training-document-field">Official university training request<input required type="file" accept=".pdf,.doc,.docx" onChange={(event) => setUniversityRequest(event.target.files?.[0] ?? null)} /><small>PDF, DOC, or DOCX; maximum 10 MB.</small></label>
+            <label className="training-document-field">University / college transcript<input required={!editing} type="file" accept=".pdf,.doc,.docx" onChange={(event) => setTranscript(event.target.files?.[0] ?? null)} /><small>{editing && request?.transcript_name ? `Current: ${request.transcript_name}. Select a file only to replace it.` : 'PDF, DOC, or DOCX; maximum 10 MB.'}</small></label>
+            <label className="training-document-field">Official university training request<input required={!editing} type="file" accept=".pdf,.doc,.docx" onChange={(event) => setUniversityRequest(event.target.files?.[0] ?? null)} /><small>{editing && request?.university_request_name ? `Current: ${request.university_request_name}. Select a file only to replace it.` : 'PDF, DOC, or DOCX; maximum 10 MB.'}</small></label>
             <label className="checkbox-label admin-job-wide training-declaration"><input required type="checkbox" checked={eligibilityConfirmed} onChange={(event) => setEligibilityConfirmed(event.target.checked)} /><span>I confirm that I meet the eligibility requirements shown above.</span></label>
             <label className="checkbox-label admin-job-wide training-declaration"><input required type="checkbox" checked={form.declaration_accepted} onChange={(event) => setForm({ ...form, declaration_accepted: event.target.checked })} /><span>I confirm that all information and documents are accurate.</span></label>
           </div>
-          <div className="admin-form-actions"><button className="button button-primary" disabled={submitting}><Save size={17} />{submitting ? 'Submitting...' : 'Submit application'}</button></div>
+          <div className="admin-form-actions">
+            {editing && <button type="button" className="button button-secondary" disabled={submitting} onClick={cancelEditing}><X size={17} />Cancel</button>}
+            <button className="button button-primary" disabled={submitting}><Save size={17} />{submitting ? 'Saving...' : editing ? 'Save changes' : 'Submit application'}</button>
+          </div>
         </form>
       </>}
     </div>
   )
 }
 
-function SubmittedRequest({ request }: { request: CooperativeTrainingRequest }) {
+function SubmittedRequest({ request, onEdit }: { request: CooperativeTrainingRequest; onEdit: () => void }) {
   return <section className="panel student-training-submitted">
     <div className="student-submission-icon"><CheckCircle2 /></div>
     <div className="student-submission-copy">
       <span className="eyebrow">Application submitted</span>
       <h2>Your cooperative training request has been received</h2>
-      <p>HR will review your information and contact you using <strong>{request.email}</strong>. Contact HR if any submitted information needs to be corrected.</p>
+      <p>HR will review your information and contact you using <strong>{request.email}</strong>. You can edit the request below if any submitted information needs to be corrected.</p>
       <div className="student-submission-details">
         <span><small>Reference</small><strong>CT-{request.id}</strong></span>
         <span><small>Submitted</small><strong>{request.created_at ? new Date(request.created_at).toLocaleDateString() : 'Recorded'}</strong></span>
@@ -207,6 +262,9 @@ function SubmittedRequest({ request }: { request: CooperativeTrainingRequest }) 
         <strong>Supporting documents</strong>
         {request.transcript_url ? <a href={request.transcript_url} target="_blank" rel="noreferrer"><FileText size={15} />{request.transcript_name || 'Transcript'}<ExternalLink size={13} /></a> : <span><FileText size={15} />{request.transcript_name || 'Transcript uploaded'}</span>}
         {request.university_request_url ? <a href={request.university_request_url} target="_blank" rel="noreferrer"><FileText size={15} />{request.university_request_name || 'University request'}<ExternalLink size={13} /></a> : <span><FileText size={15} />{request.university_request_name || 'University request uploaded'}</span>}
+      </div>
+      <div className="student-submission-actions">
+        <button type="button" className="button button-primary" onClick={onEdit}><Pencil size={16} />Edit request</button>
       </div>
     </div>
   </section>

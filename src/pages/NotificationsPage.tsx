@@ -35,10 +35,21 @@ export default function NotificationsPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    api.notifications()
-      .then(setNotifications)
-      .catch((caught: Error) => setError(caught.message))
-      .finally(() => setLoading(false))
+    let active = true
+    const loadNotifications = () => {
+      api.notifications()
+        .then((items) => { if (active) { setNotifications(items); setError(null) } })
+        .catch((caught: Error) => { if (active) setError(caught.message) })
+        .finally(() => { if (active) setLoading(false) })
+    }
+    loadNotifications()
+    const interval = window.setInterval(loadNotifications, 30_000)
+    window.addEventListener('focus', loadNotifications)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      window.removeEventListener('focus', loadNotifications)
+    }
   }, [])
 
   const markAll = async () => {
