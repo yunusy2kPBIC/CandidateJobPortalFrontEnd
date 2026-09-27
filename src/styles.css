@@ -779,6 +779,7 @@ td small { color: #8993a5; }
 .student-submission-documents { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 18px; border-top: 1px solid #e5eaf1; }
 .student-submission-documents > strong { width: 100%; color: #263a55; }
 .student-submission-documents a, .student-submission-documents span { display: inline-flex; align-items: center; gap: 7px; padding: 9px 11px; border-radius: 8px; background: #eef5fc; color: #1769b0; text-decoration: none; }
+.student-submission-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
 @media (max-width: 760px) {
   .student-requirement-grid, .student-submission-details { grid-template-columns: 1fr; }
   .student-training-submitted { padding: 22px; }

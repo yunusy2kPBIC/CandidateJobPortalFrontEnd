@@ -618,6 +618,20 @@ export const api = {
       body: form,
     })
   },
+  updateStudentCooperativeTraining: (
+    payload: CooperativeTrainingPayload,
+    transcript?: File | null,
+    universityRequest?: File | null,
+  ) => {
+    const form = new FormData()
+    form.append('payload', JSON.stringify(payload))
+    if (transcript) form.append('transcript', transcript)
+    if (universityRequest) form.append('university_request', universityRequest)
+    return request<CooperativeTrainingRequest>('/api/student/cooperative-training', {
+      method: 'PUT',
+      body: form,
+    })
+  },
   sharepointStatus: () => request<SharePointStatus>('/api/sharepoint/status'),
   sharepointDiagnostics: () => request<SharePointDiagnostics>('/api/sharepoint/diagnostics'),
   sharepointLists: () => request<SharePointList[]>('/api/sharepoint/lists'),
