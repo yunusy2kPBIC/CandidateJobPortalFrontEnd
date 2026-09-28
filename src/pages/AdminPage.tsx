@@ -187,7 +187,7 @@ const isJobWithinActiveDates = (job: Pick<Job, 'posted_at' | 'expires_at'>) => {
 }
 
 const isJobOpen = (job: Pick<Job, 'is_open' | 'posted_at' | 'expires_at'>) => job.is_open && isJobWithinActiveDates(job)
-const isJobAvailable = (job: Job) => job.is_published && isJobOpen(job)
+const isJobAvailable = (job: Job) => !job.is_deletion && job.is_published && isJobOpen(job)
 
 export default function AdminPage() {
   const location = useLocation()
@@ -421,22 +421,42 @@ export default function AdminPage() {
   }
 
   const deleteJob = async (job: Job) => {
-    if (!window.confirm(`Permanently delete “${job.title}” from the database? The activity-log entry will be retained. This cannot be undone.`)) return
+    if (!window.confirm(`Mark “${job.title}” for deletion? It will be hidden from candidates and can be restored later.`)) return
     setSaving(`delete-job-${job.id}`)
     setError(null)
     setNotice(null)
     try {
       const result = await api.deleteAdminJob(job.id)
-      setJobs((current) => current.filter((item) => item.id !== job.id))
+      setJobs((current) => current.map((item) => item.id === job.id ? { ...item, is_deletion: true } : item))
       if (isJobAvailable(job)) {
         setSummary((current) => current ? { ...current, open_jobs: Math.max(0, current.open_jobs - 1) } : current)
       }
       if (editingJob?.id === job.id) closeJobForm()
-      setNotice(`${result.message}. The deletion remains recorded in the activity log.`)
+      setNotice(`${result.message}. The job can be restored by an Administrator.`)
       void refreshAuditLogs()
       void refreshSummary()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to delete the job')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const restoreJob = async (job: Job) => {
+    setSaving(`restore-job-${job.id}`)
+    setError(null)
+    setNotice(null)
+    try {
+      const restored = await api.restoreAdminJob(job.id)
+      setJobs((current) => current.map((item) => item.id === restored.id ? restored : item))
+      if (isJobAvailable(restored)) {
+        setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + 1 } : current)
+      }
+      setNotice(`Job “${restored.title}” was restored successfully.`)
+      void refreshAuditLogs()
+      void refreshSummary()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to restore the job')
     } finally {
       setSaving(null)
     }
@@ -623,7 +643,7 @@ export default function AdminPage() {
     job.job_function,
     job.career_level,
     job.employment_type,
-    isJobOpen(job) ? 'open' : 'closed',
+    job.is_deletion ? 'deleted marked for deletion' : isJobOpen(job) ? 'open' : 'closed',
     job.is_published ? 'published' : 'unpublished',
   ]))
   const jobPage = paginateRows(filteredJobs, tablePages.jobs)
@@ -692,7 +712,7 @@ export default function AdminPage() {
       <div className="admin-tabs" role="tablist" aria-label="Administration sections">
         <button className={activeTab === 'applications' ? 'active' : ''} onClick={() => selectTab('applications')}><ClipboardList size={17} />Applications <span>{applications.length}</span></button>
         <button className={activeTab === 'candidates' ? 'active' : ''} onClick={() => selectTab('candidates')}><UsersRound size={17} />Candidates <span>{candidates.length}</span></button>
-        <button className={activeTab === 'jobs' ? 'active' : ''} onClick={() => selectTab('jobs')}><BriefcaseBusiness size={17} /> Open Jobs <span>{jobs.length}</span></button>
+        <button className={activeTab === 'jobs' ? 'active' : ''} onClick={() => selectTab('jobs')}><BriefcaseBusiness size={17} />Jobs <span>{jobs.length}</span></button>
         <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => selectTab('requests')}><UserRound size={17} />Recruitment requests <span>{recruitmentRequests.length}</span></button>
         <button className={activeTab === 'training' ? 'active' : ''} onClick={() => selectTab('training')}><GraduationCap size={17} />Cooperative training <span>{trainingRequestCount}</span></button>
         {isAdministrator && <button className={activeTab === 'audit' ? 'active' : ''} onClick={() => selectTab('audit')}><History size={17} />Activity log <span>{auditLogs.length}</span></button>}
@@ -731,7 +751,31 @@ export default function AdminPage() {
             <section className="panel admin-table-panel">
               <div className="panel-heading"><div><h2>Job postings</h2><p>Avaliable Open Jobs, Jobs close automatically outside their posting and expiry dates.</p></div>{!showJobForm && <button className="button button-secondary button-small" onClick={openCreateJob} disabled={!hasJobOptions} title={hasJobOptions ? undefined : 'No job dropdown values are available in the database'}><Plus size={16} />Add job</button>}</div>
               <AdminTableSearch value={tableQueries.jobs} onChange={(value) => updateTableQuery('jobs', value)} placeholder="Search title, function, location or status" filteredCount={filteredJobs.length} totalCount={jobs.length} />
-              {filteredJobs.length ? <><div className="table-wrap"><table><thead><tr><th>Job Title / Job Function</th><th>Location</th><th>Posted Date</th><th>Expiry date</th><th>Status</th><th>Publish status</th><th>Actions</th></tr></thead><tbody>{jobPage.rows.map((job) => { const open = isJobOpen(job); return <tr key={job.id}><td><strong>{job.title}</strong><small>{job.division} · {job.career_level}</small></td><td>{job.city}, {job.country}</td><td>{new Date(job.posted_at).toLocaleDateString()}</td><td>{job.expires_at ? new Date(`${job.expires_at.slice(0, 10)}T00:00:00`).toLocaleDateString() : 'Not set'}</td><td><span className={`status-pill ${open ? 'status-open' : 'status-withdrawn'}`}>{open ? 'Open' : 'Closed'}</span></td><td><span className={`status-pill ${job.is_published ? 'status-open' : 'status-withdrawn'}`}>{job.is_published ? 'Published' : 'Unpublished'}</span></td><td><div className="admin-row-actions">{!job.is_published && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_published: true })}>Publish</button>}{job.is_published && open && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_open: false })}>Close</button>}{job.is_published && !job.is_open && isJobWithinActiveDates(job) && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_open: true })}>Open</button>}<button className="text-button" disabled={saving !== null} onClick={() => openEditJob(job)}><Pencil size={14} />Edit</button>{isAdministrator && <button className="text-button text-button-danger" disabled={saving !== null} onClick={() => void deleteJob(job)}><Trash2 size={14} />Delete</button>}</div></td></tr> })}</tbody></table></div><AdminTablePagination page={jobPage.page} totalPages={jobPage.totalPages} filteredCount={filteredJobs.length} onChange={(page) => updateTablePage('jobs', page)} /></> : <EmptyState title={jobs.length ? 'No matching jobs' : 'No job postings'} description={jobs.length ? 'Try a different search term.' : 'Create the first job posting.'} />}
+              {filteredJobs.length ? <>
+                <div className="table-wrap"><table><thead><tr><th>Job Title / Job Function</th><th>Location</th><th>Posted Date</th><th>Expiry date</th><th>Status</th><th>Publish status</th><th>Actions</th></tr></thead><tbody>
+                  {jobPage.rows.map((job) => {
+                    const open = isJobOpen(job)
+                    return <tr className={job.is_deletion ? 'job-row-deleted' : undefined} key={job.id}>
+                      <td><strong>{job.title}</strong><small>{job.division} · {job.career_level}</small></td>
+                      <td>{job.city}, {job.country}</td>
+                      <td>{new Date(job.posted_at).toLocaleDateString()}</td>
+                      <td>{job.expires_at ? new Date(`${job.expires_at.slice(0, 10)}T00:00:00`).toLocaleDateString() : 'Not set'}</td>
+                      <td><span className={`status-pill ${job.is_deletion || !open ? 'status-withdrawn' : 'status-open'}`}>{job.is_deletion ? 'Marked for deletion' : open ? 'Open' : 'Closed'}</span></td>
+                      <td><span className={`status-pill ${job.is_published ? 'status-open' : 'status-withdrawn'}`}>{job.is_published ? 'Published' : 'Unpublished'}</span></td>
+                      <td><div className="admin-row-actions">
+                        {job.is_deletion ? isAdministrator && <button className="text-button" disabled={saving !== null} onClick={() => void restoreJob(job)}><RefreshCw size={14} />Restore</button> : <>
+                          {!job.is_published && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_published: true })}>Publish</button>}
+                          {job.is_published && open && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_open: false })}>Close</button>}
+                          {job.is_published && !job.is_open && isJobWithinActiveDates(job) && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_open: true })}>Open</button>}
+                          <button className="text-button" disabled={saving !== null} onClick={() => openEditJob(job)}><Pencil size={14} />Edit</button>
+                          {isAdministrator && <button className="text-button text-button-danger" disabled={saving !== null} onClick={() => void deleteJob(job)}><Trash2 size={14} />Mark deletion</button>}
+                        </>}
+                      </div></td>
+                    </tr>
+                  })}
+                </tbody></table></div>
+                <AdminTablePagination page={jobPage.page} totalPages={jobPage.totalPages} filteredCount={filteredJobs.length} onChange={(page) => updateTablePage('jobs', page)} />
+              </> : <EmptyState title={jobs.length ? 'No matching jobs' : 'No job postings'} description={jobs.length ? 'Try a different search term.' : 'Create the first job posting.'} />}
             </section>
           </>}
 
@@ -739,7 +783,7 @@ export default function AdminPage() {
             {showRequestForm && <form className="panel admin-job-form recruitment-request-form" onSubmit={(event) => void saveRecruitmentRequest(event)}>
               <div className="panel-heading"><div><h2>{editingRequest ? 'Edit recruitment request' : 'Create recruitment request'}</h2><p>Recruitment Request fill out form.</p></div><button type="button" className="icon-button" onClick={closeRequestForm} aria-label="Close form"><X size={18} /></button></div>
               <div className="admin-job-fields recruitment-request-fields">
-                <label>Preferred position<input required list="preferred-position-options" value={requestForm.preferred_position} onChange={(event) => setRequestForm({ ...requestForm, preferred_position: event.target.value })} /><datalist id="preferred-position-options">{Array.from(new Set([...jobs.map((job) => job.title), ...preferredPositionSuggestions])).map((value) => <option key={value} value={value} />)}</datalist></label>
+                <label>Preferred position<input required list="preferred-position-options" value={requestForm.preferred_position} onChange={(event) => setRequestForm({ ...requestForm, preferred_position: event.target.value })} /><datalist id="preferred-position-options">{Array.from(new Set([...jobs.filter((job) => !job.is_deletion).map((job) => job.title), ...preferredPositionSuggestions])).map((value) => <option key={value} value={value} />)}</datalist></label>
                 <label>Name<input required maxLength={255} value={requestForm.name} onChange={(event) => setRequestForm({ ...requestForm, name: event.target.value })} /></label>
                 <label>Nationality<select required value={requestForm.nationality} onChange={(event) => setRequestForm({ ...requestForm, nationality: event.target.value })}><option value="" disabled>Select nationality</option>{recruitmentNationalityOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
                 <label>Gender<select value={requestForm.gender} onChange={(event) => setRequestForm({ ...requestForm, gender: event.target.value as RecruitmentRequestPayload['gender'] })}><option>Male</option><option>Female</option><option>Other</option></select></label>

@@ -600,6 +600,9 @@ td small { color: #8993a5; }
 .admin-form-actions { padding: 0 24px 24px; display: flex; justify-content: flex-end; gap: 10px; }
 .admin-status-instruction { color: #b4232f !important; font-weight: 600; }
 .application-row-disabled { background: #f8f9fb; color: #7d8798; }
+.job-row-deleted { background: #fff8f8; color: #7d6d72; }
+.job-row-deleted td { opacity: .82; }
+.job-row-deleted .admin-row-actions { opacity: 1; }
 .application-status-control { display: grid; gap: 4px; }
 .application-status-control small { color: #b4232f; font-weight: 600; white-space: nowrap; }
 .recruitment-form-actions { flex-wrap: wrap; gap: 10px; }

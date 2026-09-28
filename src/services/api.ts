@@ -77,6 +77,7 @@ export type Job = {
   is_open: boolean
   is_published: boolean
   is_featured: boolean
+  is_deletion: boolean
   posted_at: string
   expires_at: string | null
 }
@@ -553,6 +554,8 @@ export const api = {
     request<Job>(`/api/admin/jobs/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteAdminJob: (id: number) =>
     request<{ message: string }>(`/api/admin/jobs/${id}`, { method: 'DELETE' }),
+  restoreAdminJob: (id: number) =>
+    request<Job>(`/api/admin/jobs/${id}/restore`, { method: 'POST' }),
   adminCandidates: () => request<AdminCandidate[]>('/api/admin/candidates'),
   adminCandidateResume: (id: number) => requestBlob(`/api/admin/candidates/${id}/resume`),
   adminApplications: (status = '') =>
