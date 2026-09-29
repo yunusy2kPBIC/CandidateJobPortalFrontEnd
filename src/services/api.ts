@@ -169,7 +169,9 @@ export type AdminSummary = {
   candidates: number
   admins: number
   open_jobs: number
+  closed_jobs: number
   applications: number
+  hired_candidates: number
 }
 
 export type AdminJobOptions = {
@@ -204,6 +206,7 @@ export type AdminApplication = {
   application_code: string
   status: 'Under Review' | 'Interview' | 'Shortlisted' | 'Rejected' | 'Hired' | 'Withdrawn'
   applied_at: string
+  hired_at: string | null
   candidate: AdminCandidate
   job: Job
 }
@@ -255,6 +258,7 @@ export type RecruitmentRequestPayload = {
   qualification: 'High School' | 'Diploma' | "Bachelor's Degree" | "Master's Degree" | 'Doctorate' | 'Other'
   current_salary: number
   comments: string
+  hired: boolean
 }
 
 export type RecruitmentRequest = RecruitmentRequestPayload & {
@@ -262,6 +266,7 @@ export type RecruitmentRequest = RecruitmentRequestPayload & {
   web_url: string | null
   created_at: string | null
   updated_at: string | null
+  is_deleted: boolean
 }
 
 export type CooperativeTrainingPayload = {
@@ -294,10 +299,18 @@ export type CooperativeTrainingRequest = CooperativeTrainingPayload & {
   web_url: string | null
   created_at: string | null
   updated_at: string | null
+  training_status: 'Under Training' | 'Completed'
+  completion_date: string | null
+  is_deleted: boolean
   transcript_url: string | null
   transcript_name: string | null
   university_request_url: string | null
   university_request_name: string | null
+}
+
+export type CooperativeTrainingUpdatePayload = Partial<CooperativeTrainingPayload> & {
+  training_status?: CooperativeTrainingRequest['training_status']
+  completion_date?: string | null
 }
 
 export type StudentCooperativeTrainingStatus = {
@@ -585,7 +598,7 @@ export const api = {
       body: form,
     })
   },
-  updateCooperativeTrainingRequest: (id: string, payload: Partial<CooperativeTrainingPayload>) =>
+  updateCooperativeTrainingRequest: (id: string, payload: CooperativeTrainingUpdatePayload) =>
     request<CooperativeTrainingRequest>(`/api/sharepoint/cooperative-training-requests/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),

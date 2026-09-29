@@ -111,6 +111,8 @@ svg { flex-shrink: 0; }
 .button-primary { color: white; background: linear-gradient(135deg, #0b6ef3, #0349bd); box-shadow: 0 8px 20px rgba(7, 91, 216, .23); }
 .button-primary:hover:not(:disabled) { box-shadow: 0 12px 24px rgba(7, 91, 216, .3); }
 .button-secondary { color: var(--blue); background: white; border-color: #83aef1; }
+.button-danger { color: white; background: #b4232f; border-color: #b4232f; }
+.button-danger:hover:not(:disabled) { background: #941d28; box-shadow: 0 8px 18px rgba(180, 35, 47, .22); }
 .button-white { color: var(--navy); background: white; }
 .button-ghost-light { color: white; border-color: rgba(255,255,255,.55); background: rgba(255,255,255,.06); }
 .button-small { min-height: 38px; padding: 0 16px; font-size: .89rem; border-radius: 8px; }
@@ -385,6 +387,7 @@ label input, label select, label textarea, label .password-field, label .validat
 .job-meta span { display: inline-flex; align-items: center; gap: 6px; }
 .job-card-action { min-width: 130px; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; }
 .job-card-action small { color: #7e8b9f; white-space: nowrap; font-size: .72rem; }
+.job-card-dates { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
 .career-hero { height: 320px; padding: 30px; display: flex; align-items: end; border-radius: 13px; color: white; background-image: linear-gradient(90deg, rgba(1,37,81,.92), rgba(3,42,88,.15)), url('/candidate-hero.png'), linear-gradient(145deg, #0a5f89, #07265b); background-size: cover; background-position: center; box-shadow: var(--shadow-soft); overflow: hidden; }
 .career-hero span { color: #f6c744; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
 .career-hero h2 { max-width: 350px; font-size: 2rem; margin: 10px 0 8px; }
@@ -549,7 +552,7 @@ td small { color: #8993a5; }
 
 /* Recruitment administration */
 .admin-header-actions { display: flex; align-items: center; gap: 10px; }
-.admin-stats-grid { margin-bottom: 18px; }
+.admin-stats-grid { margin-bottom: 18px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .admin-tabs { margin-bottom: 18px; padding: 6px; display: flex; align-items: center; gap: 5px; overflow-x: auto; background: white; border: 1px solid var(--line); border-radius: 11px; box-shadow: var(--shadow-soft); }
 .admin-tabs button { min-height: 42px; padding: 0 16px; display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; border: 0; border-radius: 8px; color: #5d6c82; background: transparent; font-weight: 700; font-size: .86rem; cursor: pointer; }
 .admin-tabs button:hover { color: var(--blue); background: #f4f8fe; }
@@ -598,6 +601,7 @@ td small { color: #8993a5; }
 .admin-job-wide { grid-column: 1 / -1; }
 .admin-job-fields .checkbox-label { align-self: center; }
 .admin-form-actions { padding: 0 24px 24px; display: flex; justify-content: flex-end; gap: 10px; }
+.admin-form-actions .admin-delete-action { margin-right: auto; }
 .admin-status-instruction { color: #b4232f !important; font-weight: 600; }
 .application-row-disabled { background: #f8f9fb; color: #7d8798; }
 .job-row-deleted { background: #fff8f8; color: #7d6d72; }
@@ -723,6 +727,7 @@ td small { color: #8993a5; }
   .results-heading label { align-self: flex-end; }
   .job-card { flex-direction: column; }
   .job-card-action { min-width: 0; flex-direction: row; align-items: center; }
+  .job-card-dates { align-items: flex-start; }
   .jobs-aside { grid-template-columns: 1fr; }
   .career-hero { height: 280px; }
   .benefits-panel { display: none; }
