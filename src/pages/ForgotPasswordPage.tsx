@@ -149,7 +149,7 @@ export default function ForgotPasswordPage() {
             <button type="button" className="text-button" onClick={() => { setStep('request'); setPending(null); setNotice(''); setError('') }}>Use a different email</button>
             <button type="button" className="text-button" onClick={() => void requestCode()} disabled={submitting || resendIn > 0}><RotateCcw size={15} />{resendIn > 0 ? `Resend in ${countdown(resendIn)}` : 'Generate a new code'}</button>
           </div>
-          <p className="development-email-note">When email delivery is disabled, the reset code is shown here instead.</p>
+          {pending?.dev_reset_code && <p className="development-email-note">Email delivery is disabled, so the reset code is shown here instead.</p>}
         </>}
       </section>
     </PublicLayout>
