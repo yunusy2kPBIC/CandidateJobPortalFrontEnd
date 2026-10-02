@@ -134,7 +134,7 @@ export default function SharePointPage() {
     try {
       const result = await api.setupSharepoint()
       addLog('Provision SharePoint schema', 'success', JSON.stringify(result, null, 2))
-      setNotice('SharePoint schema setup completed successfully.')
+      setNotice(`SharePoint schema ${result.schema_version} completed successfully.`)
       setLists(await api.sharepointLists())
     } catch (caught) {
       const message = errorText(caught)

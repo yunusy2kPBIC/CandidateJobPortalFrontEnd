@@ -382,7 +382,14 @@ export type SharePointItem = {
 export type SharePointSetupResult = {
   site_id: string
   site_url: string | null
+  schema_version: string
   resources: Array<SharePointList & { status: 'created' | 'existing' }>
+  migrations: Array<{
+    id: string
+    description: string
+    status: 'applied' | 'verified'
+    applied_at: string | null
+  }>
 }
 
 export type SharePointCandidatePayload = {
