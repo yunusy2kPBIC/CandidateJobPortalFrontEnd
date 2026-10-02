@@ -193,21 +193,26 @@ const jobToPayload = (job: Job): AdminJobPayload => ({
   description: job.description,
   requirements: job.requirements,
   // Open/closed availability is date-driven in the edit form; unpublishing is the manual visibility switch.
-  is_open: true,
+  is_open: job.is_open,
   is_published: job.is_published,
   is_featured: job.is_featured,
   posted_at: job.posted_at.slice(0, 10),
   expires_at: job.expires_at?.slice(0, 10) ?? defaultExpiryDate(),
 })
 
+const changedJobPayload = (original: AdminJobPayload, next: AdminJobPayload): Partial<AdminJobPayload> =>
+  Object.fromEntries(
+    (Object.keys(next) as Array<keyof AdminJobPayload>)
+      .filter((key) => original[key] !== next[key])
+      .map((key) => [key, next[key]]),
+  ) as Partial<AdminJobPayload>
+
 const isJobWithinActiveDates = (job: Pick<Job, 'posted_at' | 'expires_at'>) => {
   const today = dateInputValue(new Date())
-  return job.posted_at.slice(0, 10) <= today && Boolean(job.expires_at && job.expires_at.slice(0, 10) >= today)
+  return job.posted_at.slice(0, 10) <= today && (!job.expires_at || job.expires_at.slice(0, 10) >= today)
 }
 
 const isJobOpen = (job: Pick<Job, 'is_open' | 'posted_at' | 'expires_at'>) => job.is_open && isJobWithinActiveDates(job)
-const isJobAvailable = (job: Job) => !job.is_deletion && job.is_published && isJobOpen(job)
-
 export default function AdminPage() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -418,16 +423,12 @@ export default function AdminPage() {
     setNotice(null)
     try {
       if (editingJob) {
-        const updated = await api.updateAdminJob(editingJob.id, payload)
+        const updated = await api.updateAdminJob(editingJob.id, changedJobPayload(jobToPayload(editingJob), payload))
         setJobs((current) => current.map((item) => item.id === updated.id ? updated : item))
-        if (isJobAvailable(updated) !== isJobAvailable(editingJob)) {
-          setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (isJobAvailable(updated) ? 1 : -1) } : current)
-        }
         setNotice(`Job “${updated.title}” was updated successfully.`)
       } else {
         const created = await api.createAdminJob(payload)
         setJobs((current) => [created, ...current])
-        setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (isJobAvailable(created) ? 1 : 0) } : current)
         setNotice(`Job “${created.title}” was ${created.is_published ? 'published' : 'saved as unpublished'} successfully.`)
       }
       void refreshAuditLogs()
@@ -586,13 +587,14 @@ export default function AdminPage() {
     tone: string
     tab?: AdminTab
   }> = [
-    { label: 'Applications', value: summary?.applications ?? '—', detail: 'Active applications', icon: ClipboardList, tone: 'violet', tab: 'applications' },
     { label: 'Total Registered', value: summary?.candidates ?? '—', detail: 'Candidates', icon: UsersRound, tone: 'blue', tab: 'candidates' },
+    { label: 'Total Hired', value: summary ? totalHiredCandidates : '—', detail: 'Candidates', icon: CheckCircle2, tone: 'green', tab: 'hired' },
+    { label: 'Applied for Existing Open Jobs', value: summary?.applications ?? '—', detail: 'Applications', icon: ClipboardList, tone: 'violet', tab: 'applications' },
     { label: 'Open Jobs', value: summary?.open_jobs ?? '—', detail: 'Available', icon: BriefcaseBusiness, tone: 'green', tab: 'jobs' },
     { label: 'Closed Jobs', value: summary?.closed_jobs ?? '—', detail: 'Unavailable', icon: History, tone: 'amber', tab: 'jobs' },
-    isAdministrator
-      ? { label: 'Administrators', value: summary?.admins ?? '—', detail: 'Assigned', icon: ShieldCheck, tone: 'amber' }
-      : { label: 'Total Hired', value: summary ? totalHiredCandidates : '—', detail: 'Candidates', icon: CheckCircle2, tone: 'green', tab: 'hired' },
+    ...(isAdministrator
+      ? [{ label: 'Administrators', value: summary?.admins ?? '—', detail: 'Assigned', icon: ShieldCheck, tone: 'amber' }]
+      : []),
   ]
   const todayDate = dateInputValue(new Date())
   const originalPostingDate = editingJob?.posted_at.slice(0, 10)
@@ -633,7 +635,7 @@ export default function AdminPage() {
     })),
     ...recruitmentRequests.filter((request) => request.hired).map((request): HiredCandidateRow => ({
       key: `recruitment-${request.id}`,
-      hiredAt: request.updated_at ?? request.created_at,
+      hiredAt: request.hired_at ?? request.updated_at ?? request.created_at,
       candidateName: request.name,
       email: request.email_address,
       reference: `RR-${request.id}`,
@@ -751,7 +753,7 @@ export default function AdminPage() {
         <>
           {activeTab === 'applications' && <section className="panel admin-table-panel">
             <div className="panel-heading"><div><h2>Candidate applications</h2><p className="admin-status-instruction">Please select and update the appropriate status</p></div></div>
-            <AdminTableSearch value={tableQueries.applications} onChange={(value) => updateTableQuery('applications', value)} placeholder="Search application, candidate, job or status" filteredCount={filteredApplications.length} totalCount={applications.length} />
+            <AdminTableSearch value={tableQueries.applications} onChange={(value) => updateTableQuery('applications', value)} placeholder="Search application, candidate, job or status" displayedCount={applicationPage.rows.length} filteredCount={filteredApplications.length} totalCount={applications.length} />
             {filteredApplications.length ? <><div className="table-wrap"><table><thead><tr><th>Application</th><th>Candidate / Email ID</th><th>CV</th><th>Available OPEN Job</th><th>Applied On</th><th>Status</th></tr></thead><tbody>{applicationPage.rows.map((application) => { const lockedByHire = applicationLockedByHire(application); return <tr className={lockedByHire ? 'application-row-disabled' : undefined} key={application.id}><td><strong>{application.application_code}</strong></td><td><strong>{application.candidate.first_name} {application.candidate.last_name}</strong><small>{application.candidate.email}</small></td><td>{application.candidate.resume_url ? <button className="text-button" disabled={saving === `resume-${application.candidate.id}`} onClick={() => void viewCandidateCv(application.candidate)}><FileText size={14} />{saving === `resume-${application.candidate.id}` ? 'Opening...' : 'View CV'}</button> : <small>{application.candidate.resume_name ? 'CV unavailable' : 'Not uploaded'}</small>}</td><td><strong>{application.job.title}</strong><small>{application.job.city}, {application.job.country}</small></td><td>{new Date(application.applied_at).toLocaleDateString()}</td><td><div className="application-status-control"><select className="admin-status-select" value={application.status} disabled={lockedByHire || saving === `application-${application.id}`} title={lockedByHire ? 'Disabled because this candidate has been hired for another job' : undefined} onChange={(event) => void updateApplicationStatus(application, event.target.value as AdminApplication['status'])}>{applicationStatuses.map((status) => <option key={status}>{status}</option>)}</select>{lockedByHire && <small>Disabled — candidate is already hired</small>}</div></td></tr> })}</tbody></table></div><AdminTablePagination page={applicationPage.page} totalPages={applicationPage.totalPages} filteredCount={filteredApplications.length} onChange={(page) => updateTablePage('applications', page)} /></> : <EmptyState title={applications.length ? 'No matching applications' : 'No applications'} description={applications.length ? 'Try a different search term.' : 'Candidate applications will appear here after jobs are published.'} />}
           </section>}
 
@@ -779,7 +781,7 @@ export default function AdminPage() {
             </form>}
             <section className="panel admin-table-panel">
               <div className="panel-heading"><div><h2>Job postings</h2><p>Use Edit to change posting dates or publish and unpublish a job.</p></div>{!showJobForm && <button className="button button-secondary button-small" onClick={openCreateJob} disabled={!hasJobOptions} title={hasJobOptions ? undefined : 'No job dropdown values are available in the database'}><Plus size={16} />Add job</button>}</div>
-              <AdminTableSearch value={tableQueries.jobs} onChange={(value) => updateTableQuery('jobs', value)} placeholder="Search title, function, location or status" filteredCount={filteredJobs.length} totalCount={visibleJobs.length} />
+              <AdminTableSearch value={tableQueries.jobs} onChange={(value) => updateTableQuery('jobs', value)} placeholder="Search title, function, location or status" displayedCount={jobPage.rows.length} filteredCount={filteredJobs.length} totalCount={visibleJobs.length} />
               {filteredJobs.length ? <>
                 <div className="table-wrap"><table><thead><tr><th>Job Title / Job Function</th><th>Location</th><th>Posted Date</th><th>Expiry date</th><th>Status</th><th>Publish status</th><th>Actions</th></tr></thead><tbody>
                   {jobPage.rows.map((job) => {
@@ -826,7 +828,7 @@ export default function AdminPage() {
             </form>}
             <section className="panel admin-table-panel">
               <div className="panel-heading"><div><h2>Recruitment requests</h2><p>Applied Recruitment request.</p></div>{isAdministrator && !showRequestForm && !requestsError && <button className="button button-secondary button-small" onClick={openCreateRequest}><Plus size={16} />Add request</button>}</div>
-              {!requestsError && !requestsLoading && <AdminTableSearch value={tableQueries.requests} onChange={(value) => updateTableQuery('requests', value)} placeholder="Search applicant, position, ID, contact or location" filteredCount={filteredRecruitmentRequests.length} totalCount={recruitmentRequests.length} />}
+              {!requestsError && !requestsLoading && <AdminTableSearch value={tableQueries.requests} onChange={(value) => updateTableQuery('requests', value)} placeholder="Search applicant, position, ID, contact or location" displayedCount={recruitmentRequestPage.rows.length} filteredCount={filteredRecruitmentRequests.length} totalCount={recruitmentRequests.length} />}
               {requestsError ? <div className="recruitment-setup-state"><Alert type="error" message={`${requestsError}. ${isAdministrator ? 'Run SharePoint setup to create or repair the Recruitment Requests list.' : 'Ask an Administrator to verify the SharePoint setup.'}`} />{isAdministrator && <button className="button button-primary button-small" disabled={saving === 'setup-recruitment-requests'} onClick={() => void provisionRecruitmentRequests()}>{saving === 'setup-recruitment-requests' ? 'Setting up...' : 'Set up SharePoint list'}</button>}</div> : requestsLoading ? <div className="page-loader compact"><span className="loader" /></div> : filteredRecruitmentRequests.length ? <><div className="table-wrap"><table><thead><tr><th>Name / position</th><th>Contact</th><th>iqama Id / National ID</th><th>Iqama Profession / Current Work</th><th>Location</th><th>Salary</th><th>Hired</th><th>Actions</th></tr></thead><tbody>{recruitmentRequestPage.rows.map((request) => <tr key={request.id}><td><strong>{request.name}</strong><small>{request.preferred_position}</small></td><td><strong>{request.mobile_number}</strong><small>{request.email_address}</small></td><td><strong>{request.iqama_number}</strong><small>{request.nationality} · {request.gender}</small></td><td><strong>{request.iqama_profession}</strong><small>{request.current_employer || 'Not currently employed'}</small></td><td><strong>{request.city}</strong><small>{request.accept_work_in_another_city ? 'Open to relocation' : 'Current city only'}</small></td><td><strong>SAR {request.current_salary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong><small>{request.qualification}</small></td><td><span className={`status-pill ${request.hired ? 'status-open' : 'status-withdrawn'}`}>{request.hired ? 'Yes' : 'No'}</span></td><td><div className="admin-row-actions"><button className="text-button" disabled={saving !== null} onClick={() => openEditRequest(request)}><Pencil size={14} />Edit</button><button className="text-button text-button-danger" disabled={saving !== null} onClick={() => void softDeleteRecruitmentRequest(request)}><Trash2 size={14} />Soft delete</button></div></td></tr>)}</tbody></table></div><AdminTablePagination page={recruitmentRequestPage.page} totalPages={recruitmentRequestPage.totalPages} filteredCount={filteredRecruitmentRequests.length} onChange={(page) => updateTablePage('requests', page)} /></> : <EmptyState title={recruitmentRequests.length ? 'No matching recruitment requests' : 'No recruitment requests'} description={recruitmentRequests.length ? 'Try a different search term.' : isAdministrator ? 'Add the first recruitment request. Records are saved directly in SharePoint.' : 'Recruitment requests will appear here when an Administrator adds them.'} />}
             </section>
           </>}
@@ -835,19 +837,19 @@ export default function AdminPage() {
 
           {activeTab === 'hired' && <section className="panel admin-table-panel">
             <div className="panel-heading"><div><h2>Hired candidates</h2><p>All hired candidates, ordered by the latest hiring date.</p></div></div>
-            <AdminTableSearch value={tableQueries.hired} onChange={(value) => updateTableQuery('hired', value)} placeholder="Search candidate, application, request, job or location" filteredCount={filteredHiredCandidates.length} totalCount={hiredCandidateRows.length} />
+            <AdminTableSearch value={tableQueries.hired} onChange={(value) => updateTableQuery('hired', value)} placeholder="Search candidate, application, request, job or location" displayedCount={hiredCandidatePage.rows.length} filteredCount={filteredHiredCandidates.length} totalCount={hiredCandidateRows.length} />
             {filteredHiredCandidates.length ? <><div className="table-wrap"><table><thead><tr><th>Hired on</th><th>Candidate / Email ID</th><th>Reference</th><th>Position</th><th>Location</th><th>CV</th></tr></thead><tbody>{hiredCandidatePage.rows.map((row) => <tr key={row.key}><td><strong>{row.hiredAt ? new Date(row.hiredAt).toLocaleDateString() : 'Date unavailable'}</strong><small>{row.source}</small></td><td><strong>{row.candidateName}</strong><small>{row.email}</small></td><td>{row.reference}</td><td><strong>{row.jobTitle}</strong><small>{row.jobDetail}</small></td><td>{row.location}</td><td>{row.resumeCandidate?.resume_url ? <button className="text-button" disabled={saving === `resume-${row.resumeCandidate.id}`} onClick={() => void viewCandidateCv(row.resumeCandidate!)}><FileText size={14} />{saving === `resume-${row.resumeCandidate.id}` ? 'Opening...' : 'View CV'}</button> : 'Not available'}</td></tr>)}</tbody></table></div><AdminTablePagination page={hiredCandidatePage.page} totalPages={hiredCandidatePage.totalPages} filteredCount={filteredHiredCandidates.length} onChange={(page) => updateTablePage('hired', page)} /></> : <EmptyState title={hiredCandidateRows.length ? 'No matching hired candidates' : 'No hired candidates'} description={hiredCandidateRows.length ? 'Try a different search term.' : 'Candidates will appear here when an application or recruitment request is marked as hired.'} />}
           </section>}
 
           {activeTab === 'candidates' && <section className="panel admin-table-panel">
             <div className="panel-heading"><div><h2>Registered candidates</h2><p>Candidates applied for the open jobs.</p></div></div>
-            <AdminTableSearch value={tableQueries.candidates} onChange={(value) => updateTableQuery('candidates', value)} placeholder="Search candidate, email, phone or location" filteredCount={filteredCandidates.length} totalCount={candidates.length} />
+            <AdminTableSearch value={tableQueries.candidates} onChange={(value) => updateTableQuery('candidates', value)} placeholder="Search candidate, email, phone or location" displayedCount={candidatePage.rows.length} filteredCount={filteredCandidates.length} totalCount={candidates.length} />
             {filteredCandidates.length ? <><div className="table-wrap"><table><thead><tr><th>Candidate</th><th>Contact</th><th>Location</th><th>Nationality / gender</th><th>Applications</th><th>Resume</th></tr></thead><tbody>{candidatePage.rows.map((candidate) => <tr key={candidate.id}><td><strong>{candidate.first_name} {candidate.last_name}</strong><small>{candidate.title}</small></td><td><strong>{candidate.email}</strong><small>{candidate.phone || 'No phone'}</small></td><td>{candidate.city || '—'}, {candidate.country}</td><td><strong>{candidate.nationality || 'Not selected'}</strong><small>{candidate.gender || 'Gender not selected'}</small></td><td><span className="admin-count-badge">{candidate.application_count}</span></td><td>{candidate.resume_url ? <button className="text-button" disabled={saving === `resume-${candidate.id}`} onClick={() => void viewCandidateCv(candidate)}><FileText size={14} />{saving === `resume-${candidate.id}` ? 'Opening...' : candidate.resume_name || 'View CV'}</button> : candidate.resume_name ? <span className="admin-resume-present"><CheckCircle2 size={15} />{candidate.resume_name}</span> : 'Not uploaded'}</td></tr>)}</tbody></table></div><AdminTablePagination page={candidatePage.page} totalPages={candidatePage.totalPages} filteredCount={filteredCandidates.length} onChange={(page) => updateTablePage('candidates', page)} /></> : <EmptyState title={candidates.length ? 'No matching candidates' : 'No candidates'} description={candidates.length ? 'Try a different search term.' : 'Registered candidate accounts will appear here.'} />}
           </section>}
 
           {isAdministrator && activeTab === 'audit' && <section className="panel admin-table-panel">
             <div className="panel-heading"><div><h2>Administrator activity log</h2><p>A permanent record of changes made through administration pages.</p></div></div>
-            <AdminTableSearch value={tableQueries.audit} onChange={(value) => updateTableQuery('audit', value)} placeholder="Search administrator, action, area or details" filteredCount={filteredAuditLogs.length} totalCount={auditLogs.length} />
+            <AdminTableSearch value={tableQueries.audit} onChange={(value) => updateTableQuery('audit', value)} placeholder="Search administrator, action, area or details" displayedCount={auditPage.rows.length} filteredCount={filteredAuditLogs.length} totalCount={auditLogs.length} />
             {filteredAuditLogs.length ? <><div className="table-wrap"><table><thead><tr><th>Date and time</th><th>Administrator</th><th>Action</th><th>Area</th><th>Details</th></tr></thead><tbody>{auditPage.rows.map((entry) => <tr key={entry.id}><td><strong>{new Date(entry.created_at).toLocaleDateString()}</strong><small>{new Date(entry.created_at).toLocaleTimeString()}</small></td><td><strong>{entry.admin_name}</strong><small>{entry.admin_email}</small></td><td><span className="status-pill status-open">{entry.action}</span></td><td><strong>{entry.entity_type}</strong><small>{entry.entity_id ? `ID ${entry.entity_id}` : 'System'}</small></td><td className="admin-audit-details">{entry.details}</td></tr>)}</tbody></table></div><AdminTablePagination page={auditPage.page} totalPages={auditPage.totalPages} filteredCount={filteredAuditLogs.length} onChange={(page) => updateTablePage('audit', page)} /></> : <EmptyState title={auditLogs.length ? 'No matching activity' : 'No administrator activity yet'} description={auditLogs.length ? 'Try a different search term.' : 'Changes made by administrators will appear here.'} />}
           </section>}
         </>

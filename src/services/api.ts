@@ -266,6 +266,7 @@ export type RecruitmentRequest = RecruitmentRequestPayload & {
   web_url: string | null
   created_at: string | null
   updated_at: string | null
+  hired_at: string | null
   is_deleted: boolean
 }
 
