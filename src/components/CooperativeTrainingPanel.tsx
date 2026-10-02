@@ -18,6 +18,7 @@ import { AdminTablePagination, AdminTableSearch, paginateRows } from './AdminTab
 
 type Props = {
   refreshKey?: number
+  canCreate?: boolean
   canManageSetup?: boolean
   onCountChange?: (count: number) => void
   onChanged?: () => void
@@ -91,10 +92,12 @@ function toPayload(request: CooperativeTrainingRequest): CooperativeTrainingPayl
   }
 }
 
-export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetup = false, onCountChange, onChanged }: Props) {
+export default function CooperativeTrainingPanel({ refreshKey = 0, canCreate = false, canManageSetup = false, onCountChange, onChanged }: Props) {
   const [requests, setRequests] = useState<CooperativeTrainingRequest[]>([])
   const [form, setForm] = useState<CooperativeTrainingPayload>(emptyTrainingRequest)
   const [editing, setEditing] = useState<CooperativeTrainingRequest | null>(null)
+  const [trainingStatus, setTrainingStatus] = useState<CooperativeTrainingRequest['training_status']>('Under Training')
+  const [completionDate, setCompletionDate] = useState('')
   const [transcript, setTranscript] = useState<File | null>(null)
   const [universityRequest, setUniversityRequest] = useState<File | null>(null)
   const [fileInputKey, setFileInputKey] = useState(0)
@@ -127,6 +130,8 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
 
   const clearForm = () => {
     setForm(emptyTrainingRequest)
+    setTrainingStatus('Under Training')
+    setCompletionDate('')
     setTranscript(null)
     setUniversityRequest(null)
     setFileInputKey((current) => current + 1)
@@ -144,6 +149,8 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
   const openEdit = (request: CooperativeTrainingRequest) => {
     setEditing(request)
     setForm(toPayload(request))
+    setTrainingStatus(request.training_status)
+    setCompletionDate(request.completion_date?.slice(0, 10) ?? '')
     setTranscript(null)
     setUniversityRequest(null)
     setFileInputKey((current) => current + 1)
@@ -169,13 +176,21 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
       setError(`Cumulative GPA cannot be higher than ${form.gpa_scale}.`)
       return
     }
+    if (editing && trainingStatus === 'Completed' && !completionDate) {
+      setError('Select the completion date for completed training.')
+      return
+    }
     setSaving(true)
     setError(null)
     setNotice(null)
     try {
       let saved: CooperativeTrainingRequest
       if (editing) {
-        saved = await api.updateCooperativeTrainingRequest(editing.id, form)
+        saved = await api.updateCooperativeTrainingRequest(editing.id, {
+          ...form,
+          training_status: trainingStatus,
+          completion_date: trainingStatus === 'Completed' ? completionDate : null,
+        })
         if (transcript) {
           saved = await api.replaceCooperativeTrainingDocument(editing.id, 'Transcript', transcript)
         }
@@ -199,9 +214,9 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
     }
   }
 
-  const deleteRequest = async (request: CooperativeTrainingRequest) => {
+  const softDeleteRequest = async (request: CooperativeTrainingRequest) => {
     const applicant = `${request.first_name} ${request.last_name}`
-    if (!window.confirm(`Delete the cooperative training request for ${applicant}? This also deletes its documents and cannot be undone.`)) return
+    if (!window.confirm(`Soft delete the cooperative training request for ${applicant}? The request and its documents will be retained.`)) return
     setSaving(true)
     setError(null)
     setNotice(null)
@@ -211,10 +226,10 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
       setRequests(remaining)
       onCountChange?.(remaining.length)
       if (editing?.id === request.id) closeForm()
-      setNotice(`Cooperative training request for ${applicant} was deleted successfully.`)
+      setNotice(`Cooperative training request for ${applicant} was soft deleted successfully.`)
       onChanged?.()
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to delete the cooperative training request')
+      setError(caught instanceof Error ? caught.message : 'Unable to soft delete the cooperative training request')
     } finally {
       setSaving(false)
     }
@@ -246,6 +261,8 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
     request.university_college,
     request.desired_city_for_training,
     request.current_city_of_residency,
+    request.training_status,
+    request.completion_date,
   ].some((value) => String(value).toLowerCase().includes(normalizedSearch)))
   const requestPage = paginateRows(filteredRequests, page)
 
@@ -268,6 +285,8 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
         <label>Training duration (months)<input required type="number" min={3} max={6} value={form.training_duration} onChange={(event) => setForm({ ...form, training_duration: Number(event.target.value) })} /></label>
         <label>Semester<select value={form.semester} onChange={(event) => setForm({ ...form, semester: event.target.value as CooperativeTrainingPayload['semester'] })}><option>First Semester</option><option>Second Semester</option><option>Summer Semester</option></select></label>
         <label>Training starting date<input required type="date" value={form.training_starting_date} onChange={(event) => setForm({ ...form, training_starting_date: event.target.value })} /></label>
+        {editing && <label>Training status<select value={trainingStatus} onChange={(event) => { const status = event.target.value as CooperativeTrainingRequest['training_status']; setTrainingStatus(status); if (status === 'Under Training') setCompletionDate('') }}><option>Under Training</option><option>Completed</option></select></label>}
+        {editing && trainingStatus === 'Completed' && <label>Completion date<input required type="date" min={form.training_starting_date} value={completionDate} onChange={(event) => setCompletionDate(event.target.value)} /></label>}
         <label>Training supervisor name<input required maxLength={180} value={form.training_supervisor_name} onChange={(event) => setForm({ ...form, training_supervisor_name: event.target.value })} /></label>
         <label>Training supervisor number<input required type="tel" minLength={7} maxLength={40} value={form.training_supervisor_number} onChange={(event) => setForm({ ...form, training_supervisor_number: event.target.value })} /></label>
         <label>Training supervisor email<input required type="email" maxLength={255} value={form.training_supervisor_email} onChange={(event) => setForm({ ...form, training_supervisor_email: event.target.value })} /></label>
@@ -292,9 +311,21 @@ export default function CooperativeTrainingPanel({ refreshKey = 0, canManageSetu
     </form>}
 
     <section className="panel admin-table-panel">
-      <div className="panel-heading"><div><h2>Cooperative training requests</h2><p>Applicant applied for cooperative training.</p></div>{!showForm && !error && <button className="button button-secondary button-small" onClick={openCreate}><Plus size={16} />Add request</button>}</div>
+      <div className="panel-heading"><div><h2>Cooperative training requests</h2><p>Applicant applied for cooperative training.</p></div>{canCreate && !showForm && !error && <button className="button button-secondary button-small" onClick={openCreate}><Plus size={16} />Add request</button>}</div>
       {!loading && !(error && !requests.length) && <AdminTableSearch value={search} onChange={(value) => { setSearch(value); setPage(1) }} placeholder="Search applicant, ID, university, major or location" filteredCount={filteredRequests.length} totalCount={requests.length} />}
-      {error && !requests.length && !loading ? <div className="recruitment-setup-state"><p>{canManageSetup ? 'The required lists or document library may not be ready yet.' : 'The cooperative training module is unavailable. Ask an Administrator to verify the SharePoint setup.'}</p>{canManageSetup && <button className="button button-primary button-small" disabled={settingUp} onClick={() => void setupModule()}>{settingUp ? 'Setting up...' : 'Set up module'}</button>}</div> : loading ? <div className="page-loader compact"><span className="loader" /></div> : filteredRequests.length ? <><div className="table-wrap"><table><thead><tr><th>Applicant</th><th>Contact / EMAIL ID</th><th>SEMESTER / DURATION</th><th>Education / UNIVERSITY</th><th>Location</th><th>Documents</th><th>Actions</th></tr></thead><tbody>{requestPage.rows.map((request) => <tr key={request.id}><td><strong>{request.first_name} {request.last_name}</strong><small>{request.id_number} · {request.gender}</small></td><td><strong>{request.mobile_number}</strong><small>{request.email}</small></td><td><strong>{request.semester}</strong><small>{request.training_duration} months · {new Date(`${request.training_starting_date}T00:00:00`).toLocaleDateString()}</small></td><td><strong>{request.major}</strong><small>{request.university_college} · GPA {request.cumulative_gpa}/{request.gpa_scale}</small></td><td><strong>{request.desired_city_for_training}</strong><small>Lives in {request.current_city_of_residency}</small></td><td><div className="training-document-links">{request.transcript_url ? <a href={request.transcript_url} target="_blank" rel="noreferrer"><FileText size={14} />Transcript<ExternalLink size={12} /></a> : <small>No transcript</small>}{request.university_request_url ? <a href={request.university_request_url} target="_blank" rel="noreferrer"><FileText size={14} />University request<ExternalLink size={12} /></a> : <small>No university request</small>}</div></td><td><div className="admin-row-actions"><button className="text-button" disabled={saving} onClick={() => openEdit(request)}><Pencil size={14} />Edit</button><button className="text-button text-button-danger" disabled={saving} onClick={() => void deleteRequest(request)}><Trash2 size={14} />Delete</button></div></td></tr>)}</tbody></table></div><AdminTablePagination page={requestPage.page} totalPages={requestPage.totalPages} filteredCount={filteredRequests.length} onChange={setPage} /></> : <EmptyState title={requests.length ? 'No matching cooperative training requests' : 'No cooperative training requests'} description={requests.length ? 'Try a different search term.' : 'Add the first cooperative training request and its supporting documents.'} />}
+      {error && !requests.length && !loading ? <div className="recruitment-setup-state"><p>{canManageSetup ? 'The required lists or document library may not be ready yet.' : 'The cooperative training module is unavailable. Ask an Administrator to verify the SharePoint setup.'}</p>{canManageSetup && <button className="button button-primary button-small" disabled={settingUp} onClick={() => void setupModule()}>{settingUp ? 'Setting up...' : 'Set up module'}</button>}</div> : loading ? <div className="page-loader compact"><span className="loader" /></div> : filteredRequests.length ? <>
+        <div className="table-wrap"><table><thead><tr><th>Applicant</th><th>Contact / EMAIL ID</th><th>SEMESTER / DURATION</th><th>Education / UNIVERSITY</th><th>Location</th><th>Status</th><th>Documents</th><th>Actions</th></tr></thead><tbody>{requestPage.rows.map((request) => <tr key={request.id}>
+          <td><strong>{request.first_name} {request.last_name}</strong><small>{request.id_number} · {request.gender}</small></td>
+          <td><strong>{request.mobile_number}</strong><small>{request.email}</small></td>
+          <td><strong>{request.semester}</strong><small>{request.training_duration} months · {new Date(`${request.training_starting_date}T00:00:00`).toLocaleDateString()}</small></td>
+          <td><strong>{request.major}</strong><small>{request.university_college} · GPA {request.cumulative_gpa}/{request.gpa_scale}</small></td>
+          <td><strong>{request.desired_city_for_training}</strong><small>Lives in {request.current_city_of_residency}</small></td>
+          <td><span className={`status-pill ${request.training_status === 'Completed' ? 'status-open' : 'status-under-review'}`}>{request.training_status}</span>{request.completion_date && <small>Completed {new Date(`${request.completion_date.slice(0, 10)}T00:00:00`).toLocaleDateString()}</small>}</td>
+          <td><div className="training-document-links">{request.transcript_url ? <a href={request.transcript_url} target="_blank" rel="noreferrer"><FileText size={14} />Transcript<ExternalLink size={12} /></a> : <small>No transcript</small>}{request.university_request_url ? <a href={request.university_request_url} target="_blank" rel="noreferrer"><FileText size={14} />University request<ExternalLink size={12} /></a> : <small>No university request</small>}</div></td>
+          <td><div className="admin-row-actions"><button className="text-button" disabled={saving} onClick={() => openEdit(request)}><Pencil size={14} />Edit</button><button className="text-button text-button-danger" disabled={saving} onClick={() => void softDeleteRequest(request)}><Trash2 size={14} />Soft delete</button></div></td>
+        </tr>)}</tbody></table></div>
+        <AdminTablePagination page={requestPage.page} totalPages={requestPage.totalPages} filteredCount={filteredRequests.length} onChange={setPage} />
+      </> : <EmptyState title={requests.length ? 'No matching cooperative training requests' : 'No cooperative training requests'} description={requests.length ? 'Try a different search term.' : canCreate ? 'Add the first cooperative training request and its supporting documents.' : 'Cooperative training requests will appear here when they are submitted.'} />}
     </section>
   </>
 }

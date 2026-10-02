@@ -37,14 +37,28 @@ import {
   type RecruitmentRequestPayload,
 } from '../services/api'
 
-type AdminTab = 'applications' | 'jobs' | 'candidates' | 'requests' | 'training' | 'audit'
+type AdminTab = 'applications' | 'jobs' | 'candidates' | 'hired' | 'requests' | 'training' | 'audit'
 
 type SearchableAdminTab = Exclude<AdminTab, 'training'>
+
+type HiredCandidateRow = {
+  key: string
+  hiredAt: string | null
+  candidateName: string
+  email: string
+  reference: string
+  source: string
+  jobTitle: string
+  jobDetail: string
+  location: string
+  resumeCandidate: AdminCandidate | null
+}
 
 const emptyTableQueries: Record<SearchableAdminTab, string> = {
   applications: '',
   jobs: '',
   candidates: '',
+  hired: '',
   requests: '',
   audit: '',
 }
@@ -53,6 +67,7 @@ const initialTablePages: Record<SearchableAdminTab, number> = {
   applications: 1,
   jobs: 1,
   candidates: 1,
+  hired: 1,
   requests: 1,
   audit: 1,
 }
@@ -66,6 +81,7 @@ const adminTabPaths: Record<AdminTab, string> = {
   applications: '/admin',
   jobs: '/admin/jobs',
   candidates: '/admin/candidates',
+  hired: '/admin/hired-candidates',
   requests: '/admin/recruitment-requests',
   training: '/admin/cooperative-training',
   audit: '/admin/activity-log',
@@ -73,6 +89,7 @@ const adminTabPaths: Record<AdminTab, string> = {
 
 const tabFromPath = (pathname: string): AdminTab => {
   if (pathname.endsWith('/jobs')) return 'jobs'
+  if (pathname.endsWith('/hired-candidates')) return 'hired'
   if (pathname.endsWith('/candidates')) return 'candidates'
   if (pathname.endsWith('/recruitment-requests')) return 'requests'
   if (pathname.endsWith('/cooperative-training')) return 'training'
@@ -145,6 +162,7 @@ const emptyRecruitmentRequest: RecruitmentRequestPayload = {
   qualification: "Bachelor's Degree",
   current_salary: 0,
   comments: '',
+  hired: false,
 }
 
 const cityOptions = ['Riyadh', 'Jeddah', 'Dammam', 'Al Khobar', 'Other']
@@ -174,7 +192,8 @@ const jobToPayload = (job: Job): AdminJobPayload => ({
   summary: job.summary,
   description: job.description,
   requirements: job.requirements,
-  is_open: job.is_open,
+  // Open/closed availability is date-driven in the edit form; unpublishing is the manual visibility switch.
+  is_open: true,
   is_published: job.is_published,
   is_featured: job.is_featured,
   posted_at: job.posted_at.slice(0, 10),
@@ -187,7 +206,7 @@ const isJobWithinActiveDates = (job: Pick<Job, 'posted_at' | 'expires_at'>) => {
 }
 
 const isJobOpen = (job: Pick<Job, 'is_open' | 'posted_at' | 'expires_at'>) => job.is_open && isJobWithinActiveDates(job)
-const isJobAvailable = (job: Job) => job.is_published && isJobOpen(job)
+const isJobAvailable = (job: Job) => !job.is_deletion && job.is_published && isJobOpen(job)
 
 export default function AdminPage() {
   const location = useLocation()
@@ -367,6 +386,7 @@ export default function AdminPage() {
       qualification: request.qualification,
       current_salary: Math.round(request.current_salary),
       comments: request.comments,
+      hired: request.hired,
     })
     setShowRequestForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -420,45 +440,30 @@ export default function AdminPage() {
     }
   }
 
-  const deleteJob = async (job: Job) => {
-    if (!window.confirm(`Permanently delete “${job.title}” from the database? The activity-log entry will be retained. This cannot be undone.`)) return
+  const softDeleteJob = async (job: Job) => {
+    if (!window.confirm(`Soft delete “${job.title}”? It will be hidden from candidates and the Jobs table.`)) return
     setSaving(`delete-job-${job.id}`)
     setError(null)
     setNotice(null)
     try {
       const result = await api.deleteAdminJob(job.id)
-      setJobs((current) => current.filter((item) => item.id !== job.id))
-      if (isJobAvailable(job)) {
-        setSummary((current) => current ? { ...current, open_jobs: Math.max(0, current.open_jobs - 1) } : current)
-      }
-      if (editingJob?.id === job.id) closeJobForm()
-      setNotice(`${result.message}. The deletion remains recorded in the activity log.`)
+      setJobs((current) => current.map((item) => item.id === job.id ? { ...item, is_deletion: true } : item))
+      closeJobForm()
+      setNotice(result.message)
       void refreshAuditLogs()
       void refreshSummary()
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to delete the job')
+      setError(caught instanceof Error ? caught.message : 'Unable to soft delete the job')
     } finally {
       setSaving(null)
     }
   }
 
-  const updateJobFlags = async (job: Job, changes: Partial<AdminJobPayload>) => {
-    setSaving(`job-${job.id}`)
-    setError(null)
-    setNotice(null)
+  const refreshCandidates = async () => {
     try {
-      const updated = await api.updateAdminJob(job.id, changes)
-      setJobs((current) => current.map((item) => item.id === updated.id ? updated : item))
-      if (isJobAvailable(updated) !== isJobAvailable(job)) {
-        setSummary((current) => current ? { ...current, open_jobs: current.open_jobs + (isJobAvailable(updated) ? 1 : -1) } : current)
-      }
-      setNotice(`Job “${updated.title}” was updated.`)
-      void refreshAuditLogs()
-      void refreshSummary()
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to update the job')
-    } finally {
-      setSaving(null)
+      setCandidates(await api.adminCandidates())
+    } catch {
+      // The next full refresh will reconcile candidate application counts.
     }
   }
 
@@ -471,6 +476,8 @@ export default function AdminPage() {
       setApplications((current) => current.map((item) => item.id === updated.id ? updated : item))
       setNotice(`${updated.application_code} moved to ${updated.status}. The candidate was notified.`)
       void refreshAuditLogs()
+      void refreshSummary()
+      void refreshCandidates()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to update the application')
     } finally {
@@ -531,8 +538,8 @@ export default function AdminPage() {
     }
   }
 
-  const deleteRecruitmentRequest = async (request: RecruitmentRequest) => {
-    if (!window.confirm(`Delete the recruitment request for ${request.name}? This cannot be undone.`)) return
+  const softDeleteRecruitmentRequest = async (request: RecruitmentRequest) => {
+    if (!window.confirm(`Soft delete the recruitment request for ${request.name}? It will be hidden from the administration list.`)) return
     setSaving(`delete-request-${request.id}`)
     setError(null)
     setNotice(null)
@@ -540,10 +547,10 @@ export default function AdminPage() {
       await api.deleteRecruitmentRequest(request.id)
       setRecruitmentRequests((current) => current.filter((item) => item.id !== request.id))
       if (editingRequest?.id === request.id) closeRequestForm()
-      setNotice(`Recruitment request for ${request.name} was deleted successfully.`)
+      setNotice(`Recruitment request for ${request.name} was soft deleted successfully.`)
       void refreshAuditLogs()
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to delete the recruitment request')
+      setError(caught instanceof Error ? caught.message : 'Unable to soft delete the recruitment request')
     } finally {
       setSaving(null)
     }
@@ -565,23 +572,27 @@ export default function AdminPage() {
     }
   }
 
-  const stats = [
-    { label: 'Candidates', value: summary?.candidates ?? '—', detail: 'Applied', icon: UsersRound, tone: 'blue' },
-    { label: 'Applications', value: summary?.applications ?? '—', detail: 'Received from candidates', icon: ClipboardList, tone: 'violet' },
-    { label: 'Open jobs', value: summary?.open_jobs ?? '—', detail: 'Available', icon: BriefcaseBusiness, tone: 'green' },
-    { label: 'Administrators', value: summary?.admins ?? '—', detail: 'Assigned', icon: ShieldCheck, tone: 'amber' },
-  ]
-  const Cstats = [
-    { label: 'Candidates', value: summary?.candidates ?? '—', detail: 'Applied', icon: UsersRound, tone: 'blue' }
-  ]
-  const Astats = [
-    { label: 'Applications', value: summary?.applications ?? '—', detail: 'Received from candidates', icon: ClipboardList, tone: 'violet' },
-  ]
-  const Ostats = [
-    { label: 'Open jobs', value: summary?.open_jobs ?? '—', detail: 'Available', icon: BriefcaseBusiness, tone: 'green' },
-  ]
-  const Admstats = [
-    { label: 'Administrators', value: summary?.admins ?? '—', detail: 'Assigned', icon: ShieldCheck, tone: 'amber' },
+  const totalHiredCandidates = new Set([
+    ...applications.filter((application) => application.status === 'Hired')
+      .map((application) => application.candidate.email.trim().toLowerCase() || `application-${application.id}`),
+    ...recruitmentRequests.filter((request) => request.hired)
+      .map((request) => request.email_address.trim().toLowerCase() || `recruitment-${request.id}`),
+  ]).size
+  const dashboardStats: Array<{
+    label: string
+    value: number | string
+    detail: string
+    icon: typeof ClipboardList
+    tone: string
+    tab?: AdminTab
+  }> = [
+    { label: 'Applications', value: summary?.applications ?? '—', detail: 'Active applications', icon: ClipboardList, tone: 'violet', tab: 'applications' },
+    { label: 'Total Registered', value: summary?.candidates ?? '—', detail: 'Candidates', icon: UsersRound, tone: 'blue', tab: 'candidates' },
+    { label: 'Open Jobs', value: summary?.open_jobs ?? '—', detail: 'Available', icon: BriefcaseBusiness, tone: 'green', tab: 'jobs' },
+    { label: 'Closed Jobs', value: summary?.closed_jobs ?? '—', detail: 'Unavailable', icon: History, tone: 'amber', tab: 'jobs' },
+    isAdministrator
+      ? { label: 'Administrators', value: summary?.admins ?? '—', detail: 'Assigned', icon: ShieldCheck, tone: 'amber' }
+      : { label: 'Total Hired', value: summary ? totalHiredCandidates : '—', detail: 'Candidates', icon: CheckCircle2, tone: 'green', tab: 'hired' },
   ]
   const todayDate = dateInputValue(new Date())
   const originalPostingDate = editingJob?.posted_at.slice(0, 10)
@@ -603,6 +614,43 @@ export default function AdminPage() {
     .map((application) => application.candidate.id))
   const applicationLockedByHire = (application: AdminApplication) =>
     application.status !== 'Hired' && hiredCandidateIds.has(application.candidate.id)
+  const hiredApplications = applications
+    .filter((application) => application.status === 'Hired')
+    .sort((left, right) => new Date(right.hired_at ?? right.applied_at).getTime() - new Date(left.hired_at ?? left.applied_at).getTime())
+  const hiredCandidateEmails = new Set<string>()
+  const hiredCandidateRows: HiredCandidateRow[] = [
+    ...hiredApplications.map((application): HiredCandidateRow => ({
+      key: `application-${application.id}`,
+      hiredAt: application.hired_at ?? application.applied_at,
+      candidateName: `${application.candidate.first_name} ${application.candidate.last_name}`,
+      email: application.candidate.email,
+      reference: application.application_code,
+      source: 'Job application',
+      jobTitle: application.job.title,
+      jobDetail: application.job.division,
+      location: `${application.job.city}, ${application.job.country}`,
+      resumeCandidate: application.candidate,
+    })),
+    ...recruitmentRequests.filter((request) => request.hired).map((request): HiredCandidateRow => ({
+      key: `recruitment-${request.id}`,
+      hiredAt: request.updated_at ?? request.created_at,
+      candidateName: request.name,
+      email: request.email_address,
+      reference: `RR-${request.id}`,
+      source: 'Recruitment request',
+      jobTitle: request.preferred_position,
+      jobDetail: request.qualification,
+      location: request.city,
+      resumeCandidate: null,
+    })),
+  ]
+    .sort((left, right) => new Date(right.hiredAt ?? 0).getTime() - new Date(left.hiredAt ?? 0).getTime())
+    .filter((row) => {
+      const identity = row.email.trim().toLowerCase() || row.key
+      if (hiredCandidateEmails.has(identity)) return false
+      hiredCandidateEmails.add(identity)
+      return true
+    })
   const filteredApplications = applications.filter((application) => matchesTableQuery(tableQueries.applications, [
     application.application_code,
     application.status,
@@ -615,7 +663,18 @@ export default function AdminPage() {
     application.job.country,
   ]))
   const applicationPage = paginateRows(filteredApplications, tablePages.applications)
-  const filteredJobs = jobs.filter((job) => matchesTableQuery(tableQueries.jobs, [
+  const filteredHiredCandidates = hiredCandidateRows.filter((row) => matchesTableQuery(tableQueries.hired, [
+    row.candidateName,
+    row.email,
+    row.reference,
+    row.source,
+    row.jobTitle,
+    row.jobDetail,
+    row.location,
+  ]))
+  const hiredCandidatePage = paginateRows(filteredHiredCandidates, tablePages.hired)
+  const visibleJobs = jobs.filter((job) => !job.is_deletion)
+  const filteredJobs = visibleJobs.filter((job) => matchesTableQuery(tableQueries.jobs, [
     job.title,
     job.division,
     job.country,
@@ -675,24 +734,14 @@ export default function AdminPage() {
       {error && <Alert type="error" message={error} />}
       {notice && <Alert type="success" message={notice} />}
 
-      {/* <section className="stats-grid admin-stats-grid">
-        {stats.map(({ label, value, detail, icon: Icon, tone }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong>{value}</strong><span>{detail}</span></div></article>)}
-      </section> */}
       <section className="stats-grid admin-stats-grid">
-        {Astats.map(({ label, value, detail, icon: Icon, tone }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong><button onClick={() => selectTab('applications')}>{value}</button></strong><span>{detail}</span></div></article>)}
-
-        {Cstats.map(({ label, value, detail, icon: Icon, tone }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong><button onClick={() => selectTab('candidates')}>{value}</button></strong><span>{detail}</span></div></article>)}
-
-
-        {Ostats.map(({ label, value, detail, icon: Icon, tone }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong><button onClick={() => selectTab('jobs')}>{value}</button></strong><span>{detail}</span></div></article>)}
-
-        {Admstats.map(({ label, value, detail, icon: Icon, tone }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong><button>{value}</button></strong><span>{detail}</span></div></article>)}
-
+        {dashboardStats.map(({ label, value, detail, icon: Icon, tone, tab }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong>{tab ? <button onClick={() => selectTab(tab)}>{value}</button> : value}</strong><span>{detail}</span></div></article>)}
       </section>
       <div className="admin-tabs" role="tablist" aria-label="Administration sections">
-        <button className={activeTab === 'applications' ? 'active' : ''} onClick={() => selectTab('applications')}><ClipboardList size={17} />Applications <span>{applications.length}</span></button>
+        <button className={activeTab === 'applications' ? 'active' : ''} onClick={() => selectTab('applications')}><ClipboardList size={17} />Applications <span>{summary?.applications ?? applications.length}</span></button>
         <button className={activeTab === 'candidates' ? 'active' : ''} onClick={() => selectTab('candidates')}><UsersRound size={17} />Candidates <span>{candidates.length}</span></button>
-        <button className={activeTab === 'jobs' ? 'active' : ''} onClick={() => selectTab('jobs')}><BriefcaseBusiness size={17} /> Open Jobs <span>{jobs.length}</span></button>
+        <button className={activeTab === 'hired' ? 'active' : ''} onClick={() => selectTab('hired')}><CheckCircle2 size={17} />Hired candidates <span>{hiredCandidateRows.length}</span></button>
+        <button className={activeTab === 'jobs' ? 'active' : ''} onClick={() => selectTab('jobs')}><BriefcaseBusiness size={17} />Jobs <span>{visibleJobs.length}</span></button>
         <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => selectTab('requests')}><UserRound size={17} />Recruitment requests <span>{recruitmentRequests.length}</span></button>
         <button className={activeTab === 'training' ? 'active' : ''} onClick={() => selectTab('training')}><GraduationCap size={17} />Cooperative training <span>{trainingRequestCount}</span></button>
         {isAdministrator && <button className={activeTab === 'audit' ? 'active' : ''} onClick={() => selectTab('audit')}><History size={17} />Activity log <span>{auditLogs.length}</span></button>}
@@ -724,14 +773,30 @@ export default function AdminPage() {
                 </div>
                 <RichTextEditor className="admin-job-wide" label="Description" required maxLength={10000} value={jobForm.description} onChange={(description) => setJobForm((current) => ({ ...current, description }))} placeholder="Describe the role, responsibilities, and impact." />
                 <RichTextEditor className="admin-job-wide" label="Requirements" required legacyList maxLength={10000} value={jobForm.requirements} onChange={(requirements) => setJobForm((current) => ({ ...current, requirements }))} placeholder="Add the qualifications and experience required for this role." />
-                <label className="checkbox-label"><input type="checkbox" checked={jobForm.is_published} onChange={(event) => setJobForm({ ...jobForm, is_published: event.target.checked })} />{editingJob ? 'Published' : 'Publish immediately'}</label>
+                <label>Publish status<select value={jobForm.is_published ? 'published' : 'unpublished'} onChange={(event) => setJobForm({ ...jobForm, is_published: event.target.value === 'published' })}><option value="published">Published</option><option value="unpublished">Unpublished</option></select><small className="field-help">Unpublished jobs are hidden from candidates.</small></label>
               </div>
-              <div className="admin-form-actions"><button type="button" className="button button-secondary" onClick={closeJobForm} disabled={saving === 'create-job' || saving === `edit-job-${editingJob?.id}`}>Cancel</button><button className="button button-primary" disabled={saving === 'create-job' || saving === `edit-job-${editingJob?.id}`}><Save size={17} />{saving ? 'Saving…' : editingJob ? 'Save changes' : 'Publish job'}</button></div>
+              <div className="admin-form-actions">{editingJob && isAdministrator && <button type="button" className="button button-danger admin-delete-action" onClick={() => void softDeleteJob(editingJob)} disabled={saving !== null}><Trash2 size={17} />{saving === `delete-job-${editingJob.id}` ? 'Deleting…' : 'Soft delete job'}</button>}<button type="button" className="button button-secondary" onClick={closeJobForm} disabled={saving !== null}>Cancel</button><button className="button button-primary" disabled={saving !== null}><Save size={17} />{saving ? 'Saving…' : editingJob ? 'Save changes' : jobForm.is_published ? 'Publish job' : 'Save job'}</button></div>
             </form>}
             <section className="panel admin-table-panel">
-              <div className="panel-heading"><div><h2>Job postings</h2><p>Avaliable Open Jobs, Jobs close automatically outside their posting and expiry dates.</p></div>{!showJobForm && <button className="button button-secondary button-small" onClick={openCreateJob} disabled={!hasJobOptions} title={hasJobOptions ? undefined : 'No job dropdown values are available in the database'}><Plus size={16} />Add job</button>}</div>
-              <AdminTableSearch value={tableQueries.jobs} onChange={(value) => updateTableQuery('jobs', value)} placeholder="Search title, function, location or status" filteredCount={filteredJobs.length} totalCount={jobs.length} />
-              {filteredJobs.length ? <><div className="table-wrap"><table><thead><tr><th>Job Title / Job Function</th><th>Location</th><th>Posted Date</th><th>Expiry date</th><th>Status</th><th>Publish status</th><th>Actions</th></tr></thead><tbody>{jobPage.rows.map((job) => { const open = isJobOpen(job); return <tr key={job.id}><td><strong>{job.title}</strong><small>{job.division} · {job.career_level}</small></td><td>{job.city}, {job.country}</td><td>{new Date(job.posted_at).toLocaleDateString()}</td><td>{job.expires_at ? new Date(`${job.expires_at.slice(0, 10)}T00:00:00`).toLocaleDateString() : 'Not set'}</td><td><span className={`status-pill ${open ? 'status-open' : 'status-withdrawn'}`}>{open ? 'Open' : 'Closed'}</span></td><td><span className={`status-pill ${job.is_published ? 'status-open' : 'status-withdrawn'}`}>{job.is_published ? 'Published' : 'Unpublished'}</span></td><td><div className="admin-row-actions">{!job.is_published && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_published: true })}>Publish</button>}{job.is_published && open && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_open: false })}>Close</button>}{job.is_published && !job.is_open && isJobWithinActiveDates(job) && <button className="text-button" disabled={saving === `job-${job.id}`} onClick={() => void updateJobFlags(job, { is_open: true })}>Open</button>}<button className="text-button" disabled={saving !== null} onClick={() => openEditJob(job)}><Pencil size={14} />Edit</button>{isAdministrator && <button className="text-button text-button-danger" disabled={saving !== null} onClick={() => void deleteJob(job)}><Trash2 size={14} />Delete</button>}</div></td></tr> })}</tbody></table></div><AdminTablePagination page={jobPage.page} totalPages={jobPage.totalPages} filteredCount={filteredJobs.length} onChange={(page) => updateTablePage('jobs', page)} /></> : <EmptyState title={jobs.length ? 'No matching jobs' : 'No job postings'} description={jobs.length ? 'Try a different search term.' : 'Create the first job posting.'} />}
+              <div className="panel-heading"><div><h2>Job postings</h2><p>Use Edit to change posting dates or publish and unpublish a job.</p></div>{!showJobForm && <button className="button button-secondary button-small" onClick={openCreateJob} disabled={!hasJobOptions} title={hasJobOptions ? undefined : 'No job dropdown values are available in the database'}><Plus size={16} />Add job</button>}</div>
+              <AdminTableSearch value={tableQueries.jobs} onChange={(value) => updateTableQuery('jobs', value)} placeholder="Search title, function, location or status" filteredCount={filteredJobs.length} totalCount={visibleJobs.length} />
+              {filteredJobs.length ? <>
+                <div className="table-wrap"><table><thead><tr><th>Job Title / Job Function</th><th>Location</th><th>Posted Date</th><th>Expiry date</th><th>Status</th><th>Publish status</th><th>Actions</th></tr></thead><tbody>
+                  {jobPage.rows.map((job) => {
+                    const open = isJobOpen(job)
+                    return <tr key={job.id}>
+                      <td><strong>{job.title}</strong><small>{job.division} · {job.career_level}</small></td>
+                      <td>{job.city}, {job.country}</td>
+                      <td>{new Date(job.posted_at).toLocaleDateString()}</td>
+                      <td>{job.expires_at ? new Date(`${job.expires_at.slice(0, 10)}T00:00:00`).toLocaleDateString() : 'Not set'}</td>
+                      <td><span className={`status-pill ${!open ? 'status-withdrawn' : 'status-open'}`}>{open ? 'Open' : 'Closed'}</span></td>
+                      <td><span className={`status-pill ${job.is_published ? 'status-open' : 'status-withdrawn'}`}>{job.is_published ? 'Published' : 'Unpublished'}</span></td>
+                      <td><div className="admin-row-actions"><button className="text-button" disabled={saving !== null} onClick={() => openEditJob(job)}><Pencil size={14} />Edit</button></div></td>
+                    </tr>
+                  })}
+                </tbody></table></div>
+                <AdminTablePagination page={jobPage.page} totalPages={jobPage.totalPages} filteredCount={filteredJobs.length} onChange={(page) => updateTablePage('jobs', page)} />
+              </> : <EmptyState title={visibleJobs.length ? 'No matching jobs' : 'No job postings'} description={visibleJobs.length ? 'Try a different search term.' : 'Create the first job posting.'} />}
             </section>
           </>}
 
@@ -739,7 +804,7 @@ export default function AdminPage() {
             {showRequestForm && <form className="panel admin-job-form recruitment-request-form" onSubmit={(event) => void saveRecruitmentRequest(event)}>
               <div className="panel-heading"><div><h2>{editingRequest ? 'Edit recruitment request' : 'Create recruitment request'}</h2><p>Recruitment Request fill out form.</p></div><button type="button" className="icon-button" onClick={closeRequestForm} aria-label="Close form"><X size={18} /></button></div>
               <div className="admin-job-fields recruitment-request-fields">
-                <label>Preferred position<input required list="preferred-position-options" value={requestForm.preferred_position} onChange={(event) => setRequestForm({ ...requestForm, preferred_position: event.target.value })} /><datalist id="preferred-position-options">{Array.from(new Set([...jobs.map((job) => job.title), ...preferredPositionSuggestions])).map((value) => <option key={value} value={value} />)}</datalist></label>
+                <label>Preferred position<input required list="preferred-position-options" value={requestForm.preferred_position} onChange={(event) => setRequestForm({ ...requestForm, preferred_position: event.target.value })} /><datalist id="preferred-position-options">{Array.from(new Set([...jobs.filter((job) => !job.is_deletion).map((job) => job.title), ...preferredPositionSuggestions])).map((value) => <option key={value} value={value} />)}</datalist></label>
                 <label>Name<input required maxLength={255} value={requestForm.name} onChange={(event) => setRequestForm({ ...requestForm, name: event.target.value })} /></label>
                 <label>Nationality<select required value={requestForm.nationality} onChange={(event) => setRequestForm({ ...requestForm, nationality: event.target.value })}><option value="" disabled>Select nationality</option>{recruitmentNationalityOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
                 <label>Gender<select value={requestForm.gender} onChange={(event) => setRequestForm({ ...requestForm, gender: event.target.value as RecruitmentRequestPayload['gender'] })}><option>Male</option><option>Female</option><option>Other</option></select></label>
@@ -754,18 +819,25 @@ export default function AdminPage() {
                 <label>Accept work in another city?<select value={requestForm.accept_work_in_another_city ? 'yes' : 'no'} onChange={(event) => setRequestForm({ ...requestForm, accept_work_in_another_city: event.target.value === 'yes' })}><option value="yes">Yes</option><option value="no">No</option></select></label>
                 <label>Qualification<select value={requestForm.qualification} onChange={(event) => setRequestForm({ ...requestForm, qualification: event.target.value as RecruitmentRequestPayload['qualification'] })}><option>High School</option><option>Diploma</option><option>Bachelor's Degree</option><option>Master's Degree</option><option>Doctorate</option><option>Other</option></select></label>
                 <label>Current salary (SAR)<input required type="number" min={0} max={100000000} step="1" value={requestForm.current_salary} onChange={(event) => setRequestForm({ ...requestForm, current_salary: Number.isFinite(event.target.valueAsNumber) ? Math.round(event.target.valueAsNumber) : 0 })} /></label>
+                {editingRequest && <label className="checkbox-label"><input type="checkbox" checked={requestForm.hired} onChange={(event) => setRequestForm({ ...requestForm, hired: event.target.checked })} />Hired</label>}
                 <label className="admin-job-wide recruitment-comments">Comments <em>*</em><textarea required rows={4} maxLength={5000} value={requestForm.comments} onChange={(event) => setRequestForm({ ...requestForm, comments: event.target.value })} /></label>
               </div>
               <div className="admin-form-actions recruitment-form-actions"><button type="button" className="button button-secondary" onClick={() => setRequestForm({ ...emptyRecruitmentRequest, nationality: preferredNationality(jobOptions.nationalities) })}>Reset</button><button type="button" className="button button-secondary" onClick={closeRequestForm}>Cancel</button><button className="button button-primary" disabled={saving === 'create-request' || saving === `edit-request-${editingRequest?.id}`}><Save size={17} />{saving ? 'Saving...' : editingRequest ? 'Save changes' : 'Submit request'}</button></div>
             </form>}
             <section className="panel admin-table-panel">
-              <div className="panel-heading"><div><h2>Recruitment requests</h2><p>Applied Recruitment request.</p></div>{!showRequestForm && !requestsError && <button className="button button-secondary button-small" onClick={openCreateRequest}><Plus size={16} />Add request</button>}</div>
+              <div className="panel-heading"><div><h2>Recruitment requests</h2><p>Applied Recruitment request.</p></div>{isAdministrator && !showRequestForm && !requestsError && <button className="button button-secondary button-small" onClick={openCreateRequest}><Plus size={16} />Add request</button>}</div>
               {!requestsError && !requestsLoading && <AdminTableSearch value={tableQueries.requests} onChange={(value) => updateTableQuery('requests', value)} placeholder="Search applicant, position, ID, contact or location" filteredCount={filteredRecruitmentRequests.length} totalCount={recruitmentRequests.length} />}
-              {requestsError ? <div className="recruitment-setup-state"><Alert type="error" message={`${requestsError}. ${isAdministrator ? 'Run SharePoint setup to create or repair the Recruitment Requests list.' : 'Ask an Administrator to verify the SharePoint setup.'}`} />{isAdministrator && <button className="button button-primary button-small" disabled={saving === 'setup-recruitment-requests'} onClick={() => void provisionRecruitmentRequests()}>{saving === 'setup-recruitment-requests' ? 'Setting up...' : 'Set up SharePoint list'}</button>}</div> : requestsLoading ? <div className="page-loader compact"><span className="loader" /></div> : filteredRecruitmentRequests.length ? <><div className="table-wrap"><table><thead><tr><th>Name / position</th><th>Contact</th><th>iqama Id / National ID</th><th>Iqama Profession / Current Work</th><th>Location</th><th>Salary</th><th>Actions</th></tr></thead><tbody>{recruitmentRequestPage.rows.map((request) => <tr key={request.id}><td><strong>{request.name}</strong><small>{request.preferred_position}</small></td><td><strong>{request.mobile_number}</strong><small>{request.email_address}</small></td><td><strong>{request.iqama_number}</strong><small>{request.nationality} · {request.gender}</small></td><td><strong>{request.iqama_profession}</strong><small>{request.current_employer || 'Not currently employed'}</small></td><td><strong>{request.city}</strong><small>{request.accept_work_in_another_city ? 'Open to relocation' : 'Current city only'}</small></td><td><strong>SAR {request.current_salary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong><small>{request.qualification}</small></td><td><div className="admin-row-actions"><button className="text-button" disabled={saving !== null} onClick={() => openEditRequest(request)}><Pencil size={14} />Edit</button><button className="text-button text-button-danger" disabled={saving !== null} onClick={() => void deleteRecruitmentRequest(request)}><Trash2 size={14} />Delete</button></div></td></tr>)}</tbody></table></div><AdminTablePagination page={recruitmentRequestPage.page} totalPages={recruitmentRequestPage.totalPages} filteredCount={filteredRecruitmentRequests.length} onChange={(page) => updateTablePage('requests', page)} /></> : <EmptyState title={recruitmentRequests.length ? 'No matching recruitment requests' : 'No recruitment requests'} description={recruitmentRequests.length ? 'Try a different search term.' : 'Add the first recruitment request. Records are saved directly in SharePoint.'} />}
+              {requestsError ? <div className="recruitment-setup-state"><Alert type="error" message={`${requestsError}. ${isAdministrator ? 'Run SharePoint setup to create or repair the Recruitment Requests list.' : 'Ask an Administrator to verify the SharePoint setup.'}`} />{isAdministrator && <button className="button button-primary button-small" disabled={saving === 'setup-recruitment-requests'} onClick={() => void provisionRecruitmentRequests()}>{saving === 'setup-recruitment-requests' ? 'Setting up...' : 'Set up SharePoint list'}</button>}</div> : requestsLoading ? <div className="page-loader compact"><span className="loader" /></div> : filteredRecruitmentRequests.length ? <><div className="table-wrap"><table><thead><tr><th>Name / position</th><th>Contact</th><th>iqama Id / National ID</th><th>Iqama Profession / Current Work</th><th>Location</th><th>Salary</th><th>Hired</th><th>Actions</th></tr></thead><tbody>{recruitmentRequestPage.rows.map((request) => <tr key={request.id}><td><strong>{request.name}</strong><small>{request.preferred_position}</small></td><td><strong>{request.mobile_number}</strong><small>{request.email_address}</small></td><td><strong>{request.iqama_number}</strong><small>{request.nationality} · {request.gender}</small></td><td><strong>{request.iqama_profession}</strong><small>{request.current_employer || 'Not currently employed'}</small></td><td><strong>{request.city}</strong><small>{request.accept_work_in_another_city ? 'Open to relocation' : 'Current city only'}</small></td><td><strong>SAR {request.current_salary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong><small>{request.qualification}</small></td><td><span className={`status-pill ${request.hired ? 'status-open' : 'status-withdrawn'}`}>{request.hired ? 'Yes' : 'No'}</span></td><td><div className="admin-row-actions"><button className="text-button" disabled={saving !== null} onClick={() => openEditRequest(request)}><Pencil size={14} />Edit</button><button className="text-button text-button-danger" disabled={saving !== null} onClick={() => void softDeleteRecruitmentRequest(request)}><Trash2 size={14} />Soft delete</button></div></td></tr>)}</tbody></table></div><AdminTablePagination page={recruitmentRequestPage.page} totalPages={recruitmentRequestPage.totalPages} filteredCount={filteredRecruitmentRequests.length} onChange={(page) => updateTablePage('requests', page)} /></> : <EmptyState title={recruitmentRequests.length ? 'No matching recruitment requests' : 'No recruitment requests'} description={recruitmentRequests.length ? 'Try a different search term.' : isAdministrator ? 'Add the first recruitment request. Records are saved directly in SharePoint.' : 'Recruitment requests will appear here when an Administrator adds them.'} />}
             </section>
           </>}
 
-          {activeTab === 'training' && <CooperativeTrainingPanel refreshKey={trainingRefreshKey} canManageSetup={isAdministrator} onCountChange={setTrainingRequestCount} onChanged={() => void refreshAuditLogs()} />}
+          {activeTab === 'training' && <CooperativeTrainingPanel refreshKey={trainingRefreshKey} canCreate={isAdministrator} canManageSetup={isAdministrator} onCountChange={setTrainingRequestCount} onChanged={() => void refreshAuditLogs()} />}
+
+          {activeTab === 'hired' && <section className="panel admin-table-panel">
+            <div className="panel-heading"><div><h2>Hired candidates</h2><p>All hired candidates, ordered by the latest hiring date.</p></div></div>
+            <AdminTableSearch value={tableQueries.hired} onChange={(value) => updateTableQuery('hired', value)} placeholder="Search candidate, application, request, job or location" filteredCount={filteredHiredCandidates.length} totalCount={hiredCandidateRows.length} />
+            {filteredHiredCandidates.length ? <><div className="table-wrap"><table><thead><tr><th>Hired on</th><th>Candidate / Email ID</th><th>Reference</th><th>Position</th><th>Location</th><th>CV</th></tr></thead><tbody>{hiredCandidatePage.rows.map((row) => <tr key={row.key}><td><strong>{row.hiredAt ? new Date(row.hiredAt).toLocaleDateString() : 'Date unavailable'}</strong><small>{row.source}</small></td><td><strong>{row.candidateName}</strong><small>{row.email}</small></td><td>{row.reference}</td><td><strong>{row.jobTitle}</strong><small>{row.jobDetail}</small></td><td>{row.location}</td><td>{row.resumeCandidate?.resume_url ? <button className="text-button" disabled={saving === `resume-${row.resumeCandidate.id}`} onClick={() => void viewCandidateCv(row.resumeCandidate!)}><FileText size={14} />{saving === `resume-${row.resumeCandidate.id}` ? 'Opening...' : 'View CV'}</button> : 'Not available'}</td></tr>)}</tbody></table></div><AdminTablePagination page={hiredCandidatePage.page} totalPages={hiredCandidatePage.totalPages} filteredCount={filteredHiredCandidates.length} onChange={(page) => updateTablePage('hired', page)} /></> : <EmptyState title={hiredCandidateRows.length ? 'No matching hired candidates' : 'No hired candidates'} description={hiredCandidateRows.length ? 'Try a different search term.' : 'Candidates will appear here when an application or recruitment request is marked as hired.'} />}
+          </section>}
 
           {activeTab === 'candidates' && <section className="panel admin-table-panel">
             <div className="panel-heading"><div><h2>Registered candidates</h2><p>Candidates applied for the open jobs.</p></div></div>

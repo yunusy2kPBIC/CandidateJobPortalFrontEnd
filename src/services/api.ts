@@ -77,6 +77,7 @@ export type Job = {
   is_open: boolean
   is_published: boolean
   is_featured: boolean
+  is_deletion: boolean
   posted_at: string
   expires_at: string | null
 }
@@ -168,7 +169,9 @@ export type AdminSummary = {
   candidates: number
   admins: number
   open_jobs: number
+  closed_jobs: number
   applications: number
+  hired_candidates: number
 }
 
 export type AdminJobOptions = {
@@ -203,6 +206,7 @@ export type AdminApplication = {
   application_code: string
   status: 'Under Review' | 'Interview' | 'Shortlisted' | 'Rejected' | 'Hired' | 'Withdrawn'
   applied_at: string
+  hired_at: string | null
   candidate: AdminCandidate
   job: Job
 }
@@ -254,6 +258,7 @@ export type RecruitmentRequestPayload = {
   qualification: 'High School' | 'Diploma' | "Bachelor's Degree" | "Master's Degree" | 'Doctorate' | 'Other'
   current_salary: number
   comments: string
+  hired: boolean
 }
 
 export type RecruitmentRequest = RecruitmentRequestPayload & {
@@ -261,6 +266,7 @@ export type RecruitmentRequest = RecruitmentRequestPayload & {
   web_url: string | null
   created_at: string | null
   updated_at: string | null
+  is_deleted: boolean
 }
 
 export type CooperativeTrainingPayload = {
@@ -293,10 +299,18 @@ export type CooperativeTrainingRequest = CooperativeTrainingPayload & {
   web_url: string | null
   created_at: string | null
   updated_at: string | null
+  training_status: 'Under Training' | 'Completed'
+  completion_date: string | null
+  is_deleted: boolean
   transcript_url: string | null
   transcript_name: string | null
   university_request_url: string | null
   university_request_name: string | null
+}
+
+export type CooperativeTrainingUpdatePayload = Partial<CooperativeTrainingPayload> & {
+  training_status?: CooperativeTrainingRequest['training_status']
+  completion_date?: string | null
 }
 
 export type StudentCooperativeTrainingStatus = {
@@ -368,7 +382,14 @@ export type SharePointItem = {
 export type SharePointSetupResult = {
   site_id: string
   site_url: string | null
+  schema_version: string
   resources: Array<SharePointList & { status: 'created' | 'existing' }>
+  migrations: Array<{
+    id: string
+    description: string
+    status: 'applied' | 'verified'
+    applied_at: string | null
+  }>
 }
 
 export type SharePointCandidatePayload = {
@@ -553,6 +574,8 @@ export const api = {
     request<Job>(`/api/admin/jobs/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteAdminJob: (id: number) =>
     request<{ message: string }>(`/api/admin/jobs/${id}`, { method: 'DELETE' }),
+  restoreAdminJob: (id: number) =>
+    request<Job>(`/api/admin/jobs/${id}/restore`, { method: 'POST' }),
   adminCandidates: () => request<AdminCandidate[]>('/api/admin/candidates'),
   adminCandidateResume: (id: number) => requestBlob(`/api/admin/candidates/${id}/resume`),
   adminApplications: (status = '') =>
@@ -582,7 +605,7 @@ export const api = {
       body: form,
     })
   },
-  updateCooperativeTrainingRequest: (id: string, payload: Partial<CooperativeTrainingPayload>) =>
+  updateCooperativeTrainingRequest: (id: string, payload: CooperativeTrainingUpdatePayload) =>
     request<CooperativeTrainingRequest>(`/api/sharepoint/cooperative-training-requests/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),

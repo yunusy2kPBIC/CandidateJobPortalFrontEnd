@@ -4,6 +4,10 @@ import type { Job } from '../services/api'
 
 export default function JobCard({ job, applied = false }: { job: Job; applied?: boolean }) {
   const posted = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(job.posted_at))
+  const expires = job.expires_at
+    ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(`${job.expires_at.slice(0, 10)}T00:00:00`))
+    : null
+
   return (
     <article className="job-card">
       <div className="job-card-main">
@@ -18,7 +22,10 @@ export default function JobCard({ job, applied = false }: { job: Job; applied?: 
         </div>
       </div>
       <div className="job-card-action">
-        <small>Posted on {posted}</small>
+        <div className="job-card-dates">
+          <small>Posted on {posted}</small>
+          {expires && <small>Expiry date: {expires}</small>}
+        </div>
         <Link className="button button-primary button-small" to={`/jobs/${job.id}`}>View Details</Link>
       </div>
     </article>

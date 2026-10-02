@@ -133,7 +133,7 @@ export default function VerifyEmailPage() {
             <RotateCcw size={15} />{resending ? 'Generating code' : resendIn > 0 ? `Resend in ${countdown(resendIn)}` : 'Generate a new code'}
           </button>
         </div>
-        <p className="development-email-note">When email delivery is disabled, the verification code is shown here instead.</p>
+        {devCode && <p className="development-email-note">Email delivery is disabled, so the verification code is shown here instead.</p>}
       </section>
     </PublicLayout>
   )
