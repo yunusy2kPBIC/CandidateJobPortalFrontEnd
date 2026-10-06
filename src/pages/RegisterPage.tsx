@@ -20,7 +20,7 @@ const initialForm = {
   country_code: '+966',
   phone: '',
   country: 'Saudi Arabia',
-  nationality: 'Saudi Arabia',
+  nationality: '',
   gender: '',
   is_student: false,
   accepted_terms: false,
@@ -53,7 +53,7 @@ export default function RegisterPage() {
   const countryOptions = form.country && !lookupCountries.includes(form.country)
     ? [form.country, ...lookupCountries]
     : lookupCountries
-  const nationalityOptions = lookups.nationalities.length ? lookups.nationalities : [form.nationality]
+  const nationalityOptions = lookups.nationalities
 
   useEffect(() => {
     let active = true
@@ -64,7 +64,7 @@ export default function RegisterPage() {
         if (current.is_student || values.nationalities.includes(current.nationality)) return current
         const preferred = values.nationalities.find((value) => value.toLowerCase().startsWith('saudi'))
           ?? values.nationalities[0]
-          ?? current.nationality
+          ?? ''
         return { ...current, nationality: preferred }
       })
     }).catch(() => undefined)
@@ -181,14 +181,14 @@ export default function RegisterPage() {
             <label>Phone number <em>*</em><input type="tel" value={form.phone} onChange={(event) => update('phone', event.target.value)} required /></label>
             <label className="full-field">Country/region of residence <em>*</em><select value={form.country} onChange={(event) => update('country', event.target.value)}>{countryOptions.map((country) => <option key={country}>{country}</option>)}</select></label>
             <label className={form.is_student ? 'full-field' : undefined}>Gender <em>*</em><select value={form.gender} onChange={(event) => update('gender', event.target.value)} required><option value="" disabled>Select gender</option><option>Male</option><option>Female</option><option>Other</option></select></label>
-            {!form.is_student && <label>Nationality <em>*</em><select value={form.nationality} onChange={(event) => update('nationality', event.target.value)} required><option value="" disabled>Select nationality</option>{nationalityOptions.map((nationality) => <option key={nationality} value={nationality}>{nationality}</option>)}</select></label>}
+            {!form.is_student && <label>Nationality <em>*</em><select value={form.nationality} onChange={(event) => update('nationality', event.target.value)} required disabled={!nationalityOptions.length}><option value="" disabled>{nationalityOptions.length ? 'Select nationality' : 'Nationality options unavailable'}</option>{nationalityOptions.map((nationality) => <option key={nationality} value={nationality}>{nationality}</option>)}</select></label>}
             <label className="checkbox-label full-field student-registration-check"><input type="checkbox" checked={form.is_student} onChange={(event) => update('is_student', event.target.checked)} /><span><strong>Register as a Student</strong><small>Select this option to apply for the Cooperative Training program instead of regular job opportunities.</small></span></label>
             <div className="human-check full-field">
               <button type="button" className={human ? 'checked' : ''} onClick={() => setHuman((value) => !value)}><span>{human && <Check size={20} />}</span>I am human</button>
               <div><ShieldCheck size={25} /><small>Protected form</small></div>
             </div>
             <label className="checkbox-label full-field terms-check"><input type="checkbox" required checked={form.accepted_terms} onChange={(event) => update('accepted_terms', event.target.checked)} disabled={!privacyNotice || !privacyReviewed} /><span>I have read and accept the <button type="button" className="privacy-inline-trigger" disabled={!privacyNotice} onClick={() => setPrivacyOpen(true)}>Candidate Portal Privacy Notice</button>{privacyNotice && <> (version {privacyNotice.version})</>} and terms of use.{privacyNotice && !privacyReviewed && <small>Open the notice and select Continue registration to enable this checkbox.</small>}</span></label>
-            <button className="button button-primary button-wide full-field" disabled={submitting || !privacyNotice || !privacyReviewed || !form.accepted_terms}>{submitting ? 'Creating account…' : 'Create Account'}</button>
+            <button className="button button-primary button-wide full-field" disabled={submitting || !privacyNotice || !privacyReviewed || !form.accepted_terms || (!form.is_student && !form.nationality)}>{submitting ? 'Creating account…' : 'Create Account'}</button>
           </form>
         </div>
         <aside className="register-aside">

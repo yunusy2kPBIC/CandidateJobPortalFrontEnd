@@ -561,6 +561,10 @@ td small { color: #8993a5; }
 .admin-tabs button.active > span { color: white; background: var(--blue); }
 .admin-table-panel { overflow: hidden; }
 .admin-table-panel .panel-heading { align-items: center; }
+.admin-job-status-filter { padding: 16px 22px 12px; display: flex; align-items: center; gap: 8px; }
+.admin-job-status-filter button { min-height: 34px; padding: 0 13px; color: #51627b; background: #f5f7fa; border: 1px solid #d7e0eb; border-radius: 18px; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.admin-job-status-filter button:hover { color: var(--blue); border-color: #9ebce3; background: #f0f6ff; }
+.admin-job-status-filter button.active { color: white; border-color: var(--blue); background: var(--blue); }
 .admin-table-search { padding: 0 22px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #e7ecf3; }
 .admin-table-search label { width: min(470px, 100%); position: relative; display: block; }
 .admin-table-search label > svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #708198; pointer-events: none; }
