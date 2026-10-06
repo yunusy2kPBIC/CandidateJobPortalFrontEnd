@@ -19,7 +19,7 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { portalRoles } from '../auth/roles'
 import { Alert, EmptyState } from '../components/Feedback'
-import { AdminTablePagination, AdminTableSearch, paginateRows } from '../components/AdminTableControls'
+import { ADMIN_PAGE_SIZE, AdminTablePagination, AdminTableSearch, paginateRows } from '../components/AdminTableControls'
 import CooperativeTrainingPanel from '../components/CooperativeTrainingPanel'
 import PageHeader from '../components/PageHeader'
 import { normalizeRichText, RichTextEditor, richTextCharacterCount } from '../components/RichText'
@@ -40,6 +40,14 @@ import {
 type AdminTab = 'applications' | 'jobs' | 'candidates' | 'hired' | 'requests' | 'training' | 'audit'
 
 type SearchableAdminTab = Exclude<AdminTab, 'training'>
+
+type JobStatusFilter = 'all' | 'open' | 'closed'
+
+const jobStatusFilters: Array<{ value: JobStatusFilter; label: string }> = [
+  { value: 'all', label: 'All jobs' },
+  { value: 'open', label: 'Open jobs' },
+  { value: 'closed', label: 'Closed jobs' },
+]
 
 type HiredCandidateRow = {
   key: string
@@ -245,6 +253,7 @@ export default function AdminPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [tableQueries, setTableQueries] = useState<Record<SearchableAdminTab, string>>(emptyTableQueries)
   const [tablePages, setTablePages] = useState<Record<SearchableAdminTab, number>>(initialTablePages)
+  const [jobStatusFilter, setJobStatusFilter] = useState<JobStatusFilter>('all')
 
   const updateTableQuery = (tab: SearchableAdminTab, value: string) => {
     setTableQueries((current) => ({ ...current, [tab]: value }))
@@ -328,6 +337,18 @@ export default function AdminPage() {
     if (tab === 'audit' && !isAdministrator) return
     setActiveTab(tab)
     navigate(adminTabPaths[tab])
+  }
+
+  const selectJobs = (status: JobStatusFilter = 'all') => {
+    setJobStatusFilter(status)
+    setTableQueries((current) => ({ ...current, jobs: '' }))
+    setTablePages((current) => ({ ...current, jobs: 1 }))
+    selectTab('jobs')
+  }
+
+  const updateJobStatusFilter = (status: JobStatusFilter) => {
+    setJobStatusFilter(status)
+    setTablePages((current) => ({ ...current, jobs: 1 }))
   }
 
   const openCreateJob = () => {
@@ -586,12 +607,13 @@ export default function AdminPage() {
     icon: typeof ClipboardList
     tone: string
     tab?: AdminTab
+    jobStatus?: Exclude<JobStatusFilter, 'all'>
   }> = [
     { label: 'Total Registered', value: summary?.candidates ?? '—', detail: 'Candidates', icon: UsersRound, tone: 'blue', tab: 'candidates' },
     { label: 'Total Hired', value: summary ? totalHiredCandidates : '—', detail: 'Candidates', icon: CheckCircle2, tone: 'green', tab: 'hired' },
     { label: 'Applied for Existing Open Jobs', value: summary?.applications ?? '—', detail: 'Applications', icon: ClipboardList, tone: 'violet', tab: 'applications' },
-    { label: 'Open Jobs', value: summary?.open_jobs ?? '—', detail: 'Available', icon: BriefcaseBusiness, tone: 'green', tab: 'jobs' },
-    { label: 'Closed Jobs', value: summary?.closed_jobs ?? '—', detail: 'Unavailable', icon: History, tone: 'amber', tab: 'jobs' },
+    { label: 'Open Jobs', value: summary?.open_jobs ?? '—', detail: 'Available', icon: BriefcaseBusiness, tone: 'green', tab: 'jobs', jobStatus: 'open' },
+    { label: 'Closed Jobs', value: summary?.closed_jobs ?? '—', detail: 'Unavailable', icon: History, tone: 'amber', tab: 'jobs', jobStatus: 'closed' },
     ...(isAdministrator
       ? [{ label: 'Administrators', value: summary?.admins ?? '—', detail: 'Assigned', icon: ShieldCheck, tone: 'amber' }]
       : []),
@@ -676,7 +698,11 @@ export default function AdminPage() {
   ]))
   const hiredCandidatePage = paginateRows(filteredHiredCandidates, tablePages.hired)
   const visibleJobs = jobs.filter((job) => !job.is_deletion)
-  const filteredJobs = visibleJobs.filter((job) => matchesTableQuery(tableQueries.jobs, [
+  const statusFilteredJobs = visibleJobs.filter((job) => {
+    if (jobStatusFilter === 'all') return true
+    return jobStatusFilter === 'open' ? isJobOpen(job) : !isJobOpen(job)
+  })
+  const filteredJobs = statusFilteredJobs.filter((job) => matchesTableQuery(tableQueries.jobs, [
     job.title,
     job.division,
     job.country,
@@ -687,7 +713,11 @@ export default function AdminPage() {
     isJobOpen(job) ? 'open' : 'closed',
     job.is_published ? 'published' : 'unpublished',
   ]))
-  const jobPage = paginateRows(filteredJobs, tablePages.jobs)
+  const jobPage = paginateRows(
+    filteredJobs,
+    tablePages.jobs,
+    jobStatusFilter === 'all' ? ADMIN_PAGE_SIZE : Math.max(ADMIN_PAGE_SIZE, filteredJobs.length),
+  )
   const filteredCandidates = candidates.filter((candidate) => matchesTableQuery(tableQueries.candidates, [
     candidate.first_name,
     candidate.last_name,
@@ -737,13 +767,13 @@ export default function AdminPage() {
       {notice && <Alert type="success" message={notice} />}
 
       <section className="stats-grid admin-stats-grid">
-        {dashboardStats.map(({ label, value, detail, icon: Icon, tone, tab }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong>{tab ? <button onClick={() => selectTab(tab)}>{value}</button> : value}</strong><span>{detail}</span></div></article>)}
+        {dashboardStats.map(({ label, value, detail, icon: Icon, tone, tab, jobStatus }) => <article className="stat-card" key={label}><span className={`stat-icon tone-${tone}`}><Icon size={21} /></span><div><small>{label}</small><strong>{tab ? <button onClick={() => jobStatus ? selectJobs(jobStatus) : selectTab(tab)}>{value}</button> : value}</strong><span>{detail}</span></div></article>)}
       </section>
       <div className="admin-tabs" role="tablist" aria-label="Administration sections">
         <button className={activeTab === 'applications' ? 'active' : ''} onClick={() => selectTab('applications')}><ClipboardList size={17} />Applications <span>{summary?.applications ?? applications.length}</span></button>
         <button className={activeTab === 'candidates' ? 'active' : ''} onClick={() => selectTab('candidates')}><UsersRound size={17} />Candidates <span>{candidates.length}</span></button>
         <button className={activeTab === 'hired' ? 'active' : ''} onClick={() => selectTab('hired')}><CheckCircle2 size={17} />Hired candidates <span>{hiredCandidateRows.length}</span></button>
-        <button className={activeTab === 'jobs' ? 'active' : ''} onClick={() => selectTab('jobs')}><BriefcaseBusiness size={17} />Jobs <span>{visibleJobs.length}</span></button>
+        <button className={activeTab === 'jobs' ? 'active' : ''} onClick={() => selectJobs()}><BriefcaseBusiness size={17} />Jobs <span>{visibleJobs.length}</span></button>
         <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => selectTab('requests')}><UserRound size={17} />Recruitment requests <span>{recruitmentRequests.length}</span></button>
         <button className={activeTab === 'training' ? 'active' : ''} onClick={() => selectTab('training')}><GraduationCap size={17} />Cooperative training <span>{trainingRequestCount}</span></button>
         {isAdministrator && <button className={activeTab === 'audit' ? 'active' : ''} onClick={() => selectTab('audit')}><History size={17} />Activity log <span>{auditLogs.length}</span></button>}
@@ -781,7 +811,10 @@ export default function AdminPage() {
             </form>}
             <section className="panel admin-table-panel">
               <div className="panel-heading"><div><h2>Job postings</h2><p>Use Edit to change posting dates or publish and unpublish a job.</p></div>{!showJobForm && <button className="button button-secondary button-small" onClick={openCreateJob} disabled={!hasJobOptions} title={hasJobOptions ? undefined : 'No job dropdown values are available in the database'}><Plus size={16} />Add job</button>}</div>
-              <AdminTableSearch value={tableQueries.jobs} onChange={(value) => updateTableQuery('jobs', value)} placeholder="Search title, function, location or status" displayedCount={jobPage.rows.length} filteredCount={filteredJobs.length} totalCount={visibleJobs.length} />
+              <div className="admin-job-status-filter" role="group" aria-label="Filter jobs by status">
+                {jobStatusFilters.map(({ value, label }) => <button type="button" className={jobStatusFilter === value ? 'active' : ''} key={value} onClick={() => updateJobStatusFilter(value)}>{label}</button>)}
+              </div>
+              <AdminTableSearch value={tableQueries.jobs} onChange={(value) => updateTableQuery('jobs', value)} placeholder="Search title, function, location or status" displayedCount={jobPage.rows.length} filteredCount={filteredJobs.length} totalCount={statusFilteredJobs.length} />
               {filteredJobs.length ? <>
                 <div className="table-wrap"><table><thead><tr><th>Job Title / Job Function</th><th>Location</th><th>Posted Date</th><th>Expiry date</th><th>Status</th><th>Publish status</th><th>Actions</th></tr></thead><tbody>
                   {jobPage.rows.map((job) => {
@@ -798,7 +831,7 @@ export default function AdminPage() {
                   })}
                 </tbody></table></div>
                 <AdminTablePagination page={jobPage.page} totalPages={jobPage.totalPages} filteredCount={filteredJobs.length} onChange={(page) => updateTablePage('jobs', page)} />
-              </> : <EmptyState title={visibleJobs.length ? 'No matching jobs' : 'No job postings'} description={visibleJobs.length ? 'Try a different search term.' : 'Create the first job posting.'} />}
+              </> : <EmptyState title={visibleJobs.length ? 'No matching jobs' : 'No job postings'} description={visibleJobs.length ? 'Try a different search term or job status.' : 'Create the first job posting.'} />}
             </section>
           </>}
 

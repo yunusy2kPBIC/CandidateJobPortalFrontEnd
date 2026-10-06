@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
       setStep('reset')
       setNotice(response.message)
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to generate password reset instructions')
+      setError(reason instanceof Error ? reason.message : 'Unable to send password reset instructions')
     } finally {
       setSubmitting(false)
     }
@@ -111,15 +111,16 @@ export default function ForgotPasswordPage() {
         <div className="verify-email-icon"><KeyRound /></div>
         <div className="eyebrow"><ShieldCheck size={17} />Secure password recovery</div>
         <h1>{step === 'request' ? 'Forgot your password?' : 'Create a new password'}</h1>
-        <p className="auth-lead">{step === 'request' ? 'Enter your account email to generate a temporary reset code.' : <>Enter the six-digit code generated for <strong>{email}</strong>.</>}</p>
+        <p className="auth-lead">{step === 'request' ? 'Enter your account email to receive a temporary reset code.' : <>Enter the six-digit code sent to <strong>{email}</strong>.</>}</p>
         {error && <Alert type="error" message={error} />}
         {notice && <Alert type="success" message={notice} />}
 
         {step === 'request' ? <form className="auth-form" onSubmit={requestCode}>
           <label>Email address
             <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" />
+            <small className="field-help">Use the exact email address registered with your portal account.</small>
           </label>
-          <button className="button button-primary button-wide" disabled={submitting}>{submitting ? 'Generating code…' : 'Continue'}</button>
+          <button className="button button-primary button-wide" disabled={submitting}>{submitting ? 'Sending code…' : 'Send reset code'}</button>
         </form> : <>
           {pending?.dev_reset_code && <div className="dev-verification-code">
             <span>Temporary reset code</span>
@@ -147,7 +148,7 @@ export default function ForgotPasswordPage() {
           </form>
           <div className="verification-resend">
             <button type="button" className="text-button" onClick={() => { setStep('request'); setPending(null); setNotice(''); setError('') }}>Use a different email</button>
-            <button type="button" className="text-button" onClick={() => void requestCode()} disabled={submitting || resendIn > 0}><RotateCcw size={15} />{resendIn > 0 ? `Resend in ${countdown(resendIn)}` : 'Generate a new code'}</button>
+            <button type="button" className="text-button" onClick={() => void requestCode()} disabled={submitting || resendIn > 0}><RotateCcw size={15} />{submitting ? 'Sending code' : resendIn > 0 ? `Resend in ${countdown(resendIn)}` : 'Send a new code'}</button>
           </div>
           {pending?.dev_reset_code && <p className="development-email-note">Email delivery is disabled, so the reset code is shown here instead.</p>}
         </>}

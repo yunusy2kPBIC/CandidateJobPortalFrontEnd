@@ -79,7 +79,7 @@ export default function VerifyEmailPage() {
       const pending = await api.resendVerification(email.trim())
       applyPending(pending)
       setCode(pending.dev_verification_code ?? '')
-      setNotice('A new six-digit verification code has been generated.')
+      setNotice('A new six-digit verification code has been sent to your email.')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to resend the verification code')
     } finally {
@@ -95,7 +95,7 @@ export default function VerifyEmailPage() {
         <div className="verify-email-icon"><MailCheck /></div>
         <div className="eyebrow"><ShieldCheck size={17} />Secure account activation</div>
         <h1>Verify your email</h1>
-        <p className="auth-lead">Enter the six-digit code generated for <strong>{email || 'your email address'}</strong>.</p>
+        <p className="auth-lead">Enter the six-digit code sent to <strong>{email || 'your email address'}</strong>.</p>
         {error && <Alert type="error" message={error} />}
         {notice && <Alert type="success" message={notice} />}
 
@@ -130,7 +130,7 @@ export default function VerifyEmailPage() {
         <div className="verification-resend">
           <span>Did not receive a code?</span>
           <button type="button" className="text-button" onClick={resend} disabled={resending || resendIn > 0 || !validEmail}>
-            <RotateCcw size={15} />{resending ? 'Generating code' : resendIn > 0 ? `Resend in ${countdown(resendIn)}` : 'Generate a new code'}
+            <RotateCcw size={15} />{resending ? 'Sending code' : resendIn > 0 ? `Resend in ${countdown(resendIn)}` : 'Send a new code'}
           </button>
         </div>
         {devCode && <p className="development-email-note">Email delivery is disabled, so the verification code is shown here instead.</p>}
