@@ -270,6 +270,14 @@ export type RecruitmentRequest = RecruitmentRequestPayload & {
   is_deleted: boolean
 }
 
+export type PublicRecruitmentRequestPayload = Omit<RecruitmentRequestPayload, 'hired'>
+
+export type PublicRecruitmentRequestResult = {
+  message: string
+  reference: string
+  confirmation_email_sent: boolean
+}
+
 export type CooperativeTrainingPayload = {
   first_name: string
   last_name: string
@@ -584,6 +592,11 @@ export const api = {
   updateAdminApplicationStatus: (id: number, status: AdminApplication['status']) =>
     request<AdminApplication>(`/api/admin/applications/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   recruitmentRequests: () => request<RecruitmentRequest[]>('/api/sharepoint/recruitment-requests'),
+  submitPublicRecruitmentRequest: (payload: PublicRecruitmentRequestPayload) =>
+    request<PublicRecruitmentRequestResult>('/api/public/recruitment-requests', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   createRecruitmentRequest: (payload: RecruitmentRequestPayload) =>
     request<RecruitmentRequest>('/api/sharepoint/recruitment-requests', { method: 'POST', body: JSON.stringify(payload) }),
   updateRecruitmentRequest: (id: string, payload: Partial<RecruitmentRequestPayload>) =>
