@@ -15,6 +15,7 @@ import PasswordPage from './pages/PasswordPage'
 import ProfilePage from './pages/ProfilePage'
 import PrivacyPage from './pages/PrivacyPage'
 import RegisterPage from './pages/RegisterPage'
+import RecruitmentRequestPage from './pages/RecruitmentRequestPage'
 import SettingsPage from './pages/SettingsPage'
 import SharePointPage from './pages/SharePointPage'
 import StudentCooperativeTrainingPage from './pages/StudentCooperativeTrainingPage'
@@ -74,6 +75,7 @@ export default function App() {
       <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
       <Route path="/verify-email" element={<PublicOnly><VerifyEmailPage /></PublicOnly>} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/recruitment-request" element={<RecruitmentRequestPage />} />
       <Route element={<ProtectedArea />}>
         <Route path="/dashboard" element={<CandidateOnly><DashboardPage /></CandidateOnly>} />
         <Route path="/jobs" element={<CandidateOnly><JobsPage /></CandidateOnly>} />

@@ -269,6 +269,37 @@ label input, label select, label textarea, label .password-field, label .validat
 .register-aside h2 { margin: 25px 0 7px; font-size: 1.55rem; }
 .register-aside > p { margin-bottom: 27px; }
 .register-illustration { height: 210px; border-radius: 12px; background-image: url('/candidate-illustration.png'), radial-gradient(circle, #d8e9ff, #eef5ff); background-size: contain; background-position: center; background-repeat: no-repeat; position: relative; overflow: hidden; }
+.public-recruitment-layout { width: min(1380px, 100%); display: grid; grid-template-columns: minmax(280px, .72fr) minmax(720px, 1.8fr); gap: 24px; align-items: start; }
+.public-recruitment-intro { padding: clamp(30px, 3.5vw, 50px); color: white; background: radial-gradient(circle at 85% 12%, rgba(64,156,255,.32), transparent 30%), linear-gradient(150deg, #084caa, #062c6c 76%); border-radius: 15px; box-shadow: var(--shadow); }
+.public-recruitment-intro h1 { margin: 17px 0 14px; color: white; font-size: clamp(2rem, 3.2vw, 2.85rem); line-height: 1.08; }
+.public-recruitment-intro > p { margin: 0; color: rgba(255,255,255,.82); line-height: 1.65; }
+.public-recruitment-benefits { display: grid; gap: 18px; margin-top: 34px; padding-top: 27px; border-top: 1px solid rgba(255,255,255,.17); }
+.public-recruitment-benefits span { display: flex; align-items: flex-start; gap: 12px; color: rgba(255,255,255,.9); font-size: .86rem; line-height: 1.5; }
+.public-recruitment-benefits svg { width: 20px; height: 20px; flex: 0 0 auto; color: #9ed0ff; }
+.public-recruitment-card { overflow: hidden; background: white; border: 1px solid #dbe3ee; border-radius: 15px; box-shadow: var(--shadow-soft); }
+.public-recruitment-heading { padding: 26px 28px 22px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; border-bottom: 1px solid #e5eaf1; }
+.public-recruitment-heading h2 { margin: 7px 0 0; font-size: 1.55rem; }
+.public-recruitment-heading p { margin: 0; color: #6e7d92; font-size: .8rem; }
+.public-recruitment-heading em, .public-recruitment-fields label > em { color: #b4232f; font-style: normal; }
+.public-recruitment-card > .alert { margin: 20px 28px 0; }
+.public-recruitment-fields { padding: 24px 28px; }
+.public-recruitment-fields label > em { margin-left: 2px; }
+.public-recruitment-declaration { min-height: auto; padding: 14px 16px; align-items: flex-start !important; border: 1px solid #d8e2ef; border-radius: 9px; background: #f8faff; }
+.public-recruitment-declaration input { margin-top: 2px; flex: 0 0 auto; }
+.public-recruitment-declaration span { color: #33455f; font-size: .84rem; line-height: 1.5; }
+.public-recruitment-actions { padding-right: 28px; padding-left: 28px; }
+.public-recruitment-complete { width: min(680px, 100%); grid-column: 1 / -1; justify-self: center; padding: clamp(34px, 5vw, 58px); text-align: center; background: white; border: 1px solid #dbe3ee; border-radius: 16px; box-shadow: var(--shadow); }
+.public-recruitment-success-icon { width: 76px; height: 76px; margin: 0 auto 22px; display: grid; place-items: center; color: #0c8046; background: #e9f8f0; border-radius: 50%; }
+.public-recruitment-success-icon svg { width: 38px; height: 38px; }
+.public-recruitment-complete h1 { margin: 12px 0 10px; font-size: clamp(1.9rem, 3vw, 2.55rem); }
+.public-recruitment-complete > p { margin: 0 auto; max-width: 520px; }
+.public-recruitment-reference { width: min(360px, 100%); margin: 27px auto 18px; padding: 16px; display: grid; gap: 4px; background: #f2f7fe; border: 1px solid #d4e4f8; border-radius: 10px; }
+.public-recruitment-reference small { color: #657792; font-weight: 600; }
+.public-recruitment-reference strong { color: #0755bd; font-size: 1.55rem; letter-spacing: .04em; }
+.public-recruitment-email-status { margin: 0 auto 24px; padding: 13px 15px; display: flex; align-items: center; justify-content: center; gap: 9px; border-radius: 9px; font-size: .85rem; line-height: 1.45; }
+.public-recruitment-email-status svg { flex: 0 0 auto; }
+.public-recruitment-email-status.success { color: #0b713d; background: #eaf8f0; border: 1px solid #bde8ce; }
+.public-recruitment-email-status.warning { color: #8a5a00; background: #fff8e6; border: 1px solid #f2d58b; }
 .illustration-orbit { position: absolute; right: 24px; top: 18px; width: 55px; height: 55px; display: grid; place-items: center; color: white; background: #277ce7; border-radius: 50%; border: 5px solid rgba(255,255,255,.8); }
 .benefit-mini { display: flex; gap: 15px; margin: 20px 0; align-items: flex-start; }
 .benefit-mini > span { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--blue); background: #dbeaff; }
@@ -645,6 +676,10 @@ td small { color: #8993a5; }
   .register-layout { grid-template-columns: minmax(0, 1fr) 340px; }
   .recruitment-request-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cooperative-training-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .public-recruitment-layout { grid-template-columns: 1fr; }
+  .public-recruitment-intro { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+  .public-recruitment-intro > .eyebrow, .public-recruitment-intro > h1, .public-recruitment-intro > p { grid-column: 1; }
+  .public-recruitment-benefits { grid-column: 2; grid-row: 1 / span 3; margin: 0; padding: 0 0 0 28px; border-top: 0; border-left: 1px solid rgba(255,255,255,.17); }
 }
 
 @media (max-width: 860px) {
@@ -658,6 +693,8 @@ td small { color: #8993a5; }
   .register-aside { order: -1; }
   .register-illustration { display: none; }
   .register-aside > p, .register-aside h2 { text-align: center; }
+  .public-recruitment-intro { display: block; }
+  .public-recruitment-benefits { margin-top: 26px; padding: 24px 0 0; border-top: 1px solid rgba(255,255,255,.17); border-left: 0; }
   .benefit-mini, .password-policy { display: none; }
   .sidebar { width: 270px; transform: translateX(-110%); transition: transform .22s ease; }
   .sidebar.sidebar-open { transform: translateX(0); }
@@ -712,6 +749,11 @@ td small { color: #8993a5; }
   .register-heading { display: block; }
   .register-heading a { margin-top: 10px; }
   .register-form { grid-template-columns: 1fr; }
+  .public-recruitment-heading { display: block; padding: 22px 20px 18px; }
+  .public-recruitment-heading > p { margin-top: 8px; }
+  .public-recruitment-card > .alert { margin: 18px 20px 0; }
+  .public-recruitment-fields { padding: 20px; }
+  .public-recruitment-actions { padding: 0 20px 20px; }
   .full-field { grid-column: auto; }
   .app-topbar > .brand .brand-copy { display: none; }
   .page-container { padding: 23px 16px 36px; }
