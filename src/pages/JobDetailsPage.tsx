@@ -122,7 +122,8 @@ export default function JobDetailsPage() {
         <article className="panel prose-panel">
           <section className="job-promise job-promise-header">
             <span className="job-promise-icon"><HeartHandshake /></span>
-            <div><small>Grow with us</small><h2>Our Promise</h2><p>PureBeverages offers a competitive package, generous leave, medical coverage, discretionary bonus, and meaningful learning and development opportunities.</p><p>Join a successful and growing global business where your contribution is valued and your career can thrive.</p></div>
+            <div><small>Grow with us</small><p>At Pure Beverages, we believe our people are the key to our success. We offer a competitive salary package, generous annual leave, comprehensive medical coverage, and meaningful learning and development opportunities. </p> </div>
+            <div><br/><br/><p>Join a successful and growing global business where your contribution is valued and your career can thrive.</p></div>
           </section>
           <section className="job-detail-section">
             <div className="job-detail-heading"><span><AlignLeft /></span><div><small>Your impact</small><h2>Description</h2></div></div>
