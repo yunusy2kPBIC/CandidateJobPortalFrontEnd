@@ -7,8 +7,10 @@ import { useAuth } from '../context/AuthContext'
 import { api, ApiError, type ExternalAuthProviders } from '../services/api'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('john.doe@example.com')
-  const [password, setPassword] = useState('Candidate@123')
+  // const [email, setEmail] = useState('john.doe@example.com')
+  // const [password, setPassword] = useState('Candidate@123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState('')
@@ -74,7 +76,7 @@ export default function LoginPage() {
           </form>
           <div className="auth-divider"><span>New to PBIC Career JobPosting?</span></div>
           <Link className="button button-secondary button-wide" to="/register">Create Account</Link>
-          <p className="demo-note">Demo access: <strong>john.doe@example.com</strong> / <strong>Candidate@123</strong></p>
+          {/* <p className="demo-note">Demo access: <strong>john.doe@example.com</strong> / <strong>Candidate@123</strong></p> */}
         </div>
         <div className="login-visual" role="img" aria-label="Modern office building at dusk">
           <div className="visual-overlay">
